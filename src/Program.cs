@@ -82,7 +82,6 @@ public class Program
 			builder.Append(' ');
 		}
 
-		Console.WriteLine(builder.ToString());
 		var processStartInfo = new ProcessStartInfo
 		{
 			FileName = executablePath,
