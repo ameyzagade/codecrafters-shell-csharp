@@ -1,39 +1,76 @@
-class Program
-{
-    static void Main()
-    {
-	while (true)
-	{
-        	Console.Write("$ ");
-		
-		string inputLine = Console.ReadLine();
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 
-		if (inputLine.Equals("exit", StringComparison.OrdinalIgnoreCase))
+public class Program
+{
+	private const string EXIT_COMMAND = "exit";
+	private const string ECHO_COMMAND = "echo";
+	private const string TYPE_COMMAND = "type";
+
+	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND];
+
+	public static void Main()
+    {
+		while (true)
 		{
-			break;
-		}
-		else if (inputLine.StartsWith("echo", StringComparison.OrdinalIgnoreCase))
-		{
-			Console.WriteLine($"{inputLine[5..]}");
-		}
-		else if (inputLine.StartsWith("type", StringComparison.OrdinalIgnoreCase))
-		{
-			var command = inputLine[5..];
-			if (command.Equals("echo", StringComparison.OrdinalIgnoreCase)
-			    || command.Equals("exit", StringComparison.OrdinalIgnoreCase)
-			    || command.Equals("type", StringComparison.OrdinalIgnoreCase))
+			PromptUser();
+
+			var (command, args) = ReadAndExtractCommandWithArguments();
+			if (command.Equals(EXIT_COMMAND, StringComparison.OrdinalIgnoreCase))
 			{
-				Console.WriteLine($"{command} is a shell builtin");
+				break;
 			}
-			else
+
+			switch (command)
 			{
-				Console.WriteLine($"{command}: not found");
+				case ECHO_COMMAND:	
+					EchoArguments(args);
+					break;
+				case TYPE_COMMAND:
+					PrintCommandType(command);
+					break;
+				default:
+					Console.WriteLine($"{command}: command not found");
+					break;
 			}
 		}
-		else
-		{
-			Console.WriteLine($"{inputLine}: command not found");
-		}
-	}
     }
+
+    private static void PromptUser() => Console.Write("$ ");
+   
+    private static (string, ReadOnlyCollection<string>) ReadAndExtractCommandWithArguments()
+    {
+		string inputLine = Console.ReadLine();
+		if (string.IsNullOrEmpty(inputLine))
+		{
+			throw new Exception("No input received!");
+		}
+
+		var input = inputLine.Split(" ");
+
+		return (input[0], input[1..].AsReadOnly());
+    }
+
+	private static void EchoArguments(ReadOnlyCollection<string> args)
+	{
+		foreach (var arg in args)
+		{
+			Console.Write(arg);
+			Console.Write(" ");
+		}
+
+		Console.WriteLine();
+	}
+
+	private static void PrintCommandType(string command)
+	{
+		if (!BuiltInCommands.Contains(command))
+		{
+			Console.WriteLine($"{command}: not found");
+
+			return;
+		}
+		
+		Console.WriteLine($"{command} is a shell builtin");
+	}
 }
