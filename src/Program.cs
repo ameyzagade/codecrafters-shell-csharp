@@ -27,7 +27,7 @@ class Program
 			}
 			else
 			{
-				Console.WriteLine($"{command}: command not found");
+				Console.WriteLine($"{command}: not found");
 			}
 		}
 		else
