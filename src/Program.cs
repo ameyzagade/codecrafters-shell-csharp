@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Text;
 
 public class Program
 {
@@ -17,7 +16,7 @@ public class Program
 		{
 			PromptUser();
 
-			var (command, args) = ReadAndExtractCommandWithArguments();
+			var (command, argString) = ReadAndExtractCommandWithArgumentString();
 			if (command.Equals(EXIT_COMMAND, StringComparison.OrdinalIgnoreCase))
 			{
 				break;
@@ -25,41 +24,40 @@ public class Program
 
 			if (IsBuiltInCommand(command))
 			{
-				RunBuiltIn(command, args);
+				RunBuiltIn(command, argString);
 			}
 			else
 			{
-				RunExecutable(command, args);
+				RunExecutable(command, argString);
 			}
 		}
     }
 
     private static void PromptUser() => Console.Write("$ ");
    
-    private static (string, ReadOnlyCollection<string>) ReadAndExtractCommandWithArguments()
+    private static (string, string) ReadAndExtractCommandWithArgumentString()
     {
-		string inputLine = Console.ReadLine();
-		if (string.IsNullOrEmpty(inputLine))
+		string? inputLine = Console.ReadLine();
+		if (string.IsNullOrWhiteSpace(inputLine))
 		{
 			throw new Exception("No input received!");
 		}
 
-		var input = inputLine.Split(' ');
-		var command = input[0];
-		var args = input.Length > 1 ? input[1..].AsReadOnly() : [];
-
-		return (command, args);
+		var firstSpaceCharacterPosition = inputLine.IndexOf(' ', 0);
+		return firstSpaceCharacterPosition == -1 
+				? (inputLine, string.Empty)
+				: (inputLine[0..firstSpaceCharacterPosition], inputLine[(firstSpaceCharacterPosition+1)..]);
     }
 
-	private static void RunBuiltIn(string command, ReadOnlyCollection<string> args)
+	private static void RunBuiltIn(string command, string argString)
 	{
 		switch (command)
 		{
 			case ECHO_COMMAND:	
-				EchoArguments(args);
+				EchoArguments(argString);
 				break;
 			case TYPE_COMMAND:
-				PrintCommandType(command);
+				PrintCommandType(argString);
 				break;
 			default:
 				Console.WriteLine($"{command}: command not found");
@@ -67,7 +65,7 @@ public class Program
 		}
 	}
 
-	private static void RunExecutable(string executable, ReadOnlyCollection<string> args)
+	private static void RunExecutable(string executable, string argString)
 	{
 		if (!TryGetExecutablePath(executable, out string executablePath))
 		{
@@ -75,17 +73,10 @@ public class Program
 			return;
 		}
 
-		var builder = new StringBuilder();
-		foreach (var arg in args)
-		{
-			builder.Append(arg);
-			builder.Append(' ');
-		}
-
 		var processStartInfo = new ProcessStartInfo
 		{
 			FileName = executablePath,
-			Arguments = builder.ToString(),
+			Arguments = argString,
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
 			UseShellExecute = false,
@@ -94,19 +85,9 @@ public class Program
 
         using var process = Process.Start(processStartInfo);
 		process?.WaitForExit();
-		
     }
 
-	private static void EchoArguments(ReadOnlyCollection<string> args)
-	{
-		foreach (var arg in args)
-		{
-			Console.Write(arg);
-			Console.Write(' ');
-		}
-
-		Console.WriteLine();
-	}
+	private static void EchoArguments(string argString) => Console.WriteLine(argString);
 
 	private static void PrintCommandType(string command)
 	{
