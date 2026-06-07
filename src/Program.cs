@@ -75,7 +75,7 @@ public class Program
 
 		var processStartInfo = new ProcessStartInfo
 		{
-			FileName = executablePath,
+			FileName = Path.GetFileName(executablePath),
 			Arguments = argString,
 		};
 
