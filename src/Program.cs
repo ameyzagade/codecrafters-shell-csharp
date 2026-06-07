@@ -47,8 +47,10 @@ public class Program
 		}
 
 		var input = inputLine.Split(" ");
+		var command = input[0];
+		var args = input.Length > 1 ? input[1..].AsReadOnly() : [];
 
-		return (input[0], input[1..].AsReadOnly());
+		return (command, args);
     }
 
 	private static void EchoArguments(ReadOnlyCollection<string> args)
