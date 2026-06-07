@@ -25,7 +25,7 @@ public class Program
 
 			if (IsBuiltInCommand(command))
 			{
-				RunBuiltIn(command);
+				RunBuiltIn(command, args);
 			}
 			else
 			{
@@ -51,7 +51,7 @@ public class Program
 		return (command, args);
     }
 
-	private static void RunBuiltIn(string command)
+	private static void RunBuiltIn(string command, ReadOnlyCollection<string> args)
 	{
 		switch (command)
 		{
@@ -59,7 +59,7 @@ public class Program
 				EchoArguments(args);
 				break;
 			case TYPE_COMMAND:
-				PrintCommandType(args[0]);
+				PrintCommandType(command);
 				break;
 			default:
 				Console.WriteLine($"{command}: command not found");
@@ -71,14 +71,20 @@ public class Program
 	{
 		if (!TryGetExecutablePath(executable, out string executablePath))
 		{
-			Console.WriteLine($"{command}: not found");
+			Console.WriteLine($"{executable}: not found");
 			return;
+		}
+
+		var builder = new StringBuilder();
+		foreach (var arg in args)
+		{
+			builder.Append(arg);
 		}
 
 		var processStartInfo = new ProcessStartInfo
 		{
 			FileName = executablePath,
-			ArgumentList = args,
+			Arguments = builder.ToString(),
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
 			UseShellExecute = false,
@@ -87,6 +93,7 @@ public class Program
 
         using var process = Process.Start(processStartInfo);
 		process?.WaitForExit();
+		
     }
 
 	private static void EchoArguments(ReadOnlyCollection<string> args)
