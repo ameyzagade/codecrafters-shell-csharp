@@ -77,10 +77,6 @@ public class Program
 		{
 			FileName = executablePath,
 			Arguments = argString,
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true,
 		};
 
         using var process = Process.Start(processStartInfo);
