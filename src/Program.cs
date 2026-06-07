@@ -2,7 +2,6 @@ class Program
 {
     static void Main()
     {
-        // TODO: Uncomment the code below to pass the first stage
 	while (true)
 	{
         	Console.Write("$ ");
@@ -13,8 +12,15 @@ class Program
 		{
 			break;
 		}
-		
-		Console.WriteLine($"{inputLine}: command not found");
+
+		if (inputLine.StartsWith("echo", StringComparison.OrdinalIgnoreCase))
+		{
+			Console.WriteLine($"{inputLine[5..]}");
+		}
+		else
+		{
+			Console.WriteLine($"{inputLine}: command not found");
+		}
 
 	}
     }
