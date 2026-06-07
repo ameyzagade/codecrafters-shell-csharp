@@ -80,9 +80,7 @@ public class Program
 		};
 
         using var process = Process.Start(processStartInfo);
-	 	var output = process.StandardOutput.ReadToEnd();
 		process?.WaitForExit();
-		Console.WriteLine(output);
     }
 
 	private static void EchoArguments(string argString) => Console.WriteLine(argString);
