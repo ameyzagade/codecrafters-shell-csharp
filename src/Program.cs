@@ -27,8 +27,7 @@ public class Program
 					EchoArguments(args);
 					break;
 				case TYPE_COMMAND:
-					Console.WriteLine(args[0]);
-					PrintCommandType(command);
+					PrintCommandType(args[0]);
 					break;
 				default:
 					Console.WriteLine($"{command}: command not found");
