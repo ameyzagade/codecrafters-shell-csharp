@@ -46,7 +46,7 @@ public class Program
 
 		var input = inputLine.Split(' ');
 		var command = input[0];
-		var args = input.Length > 1 ? input[1..]?.AsReadOnly() : [];
+		var args = input.Length > 1 ? input[1..].AsReadOnly() : [];
 
 		return (command, args);
     }
@@ -81,6 +81,7 @@ public class Program
 			builder.Append(arg);
 		}
 
+		Console.WriteLine(builder.ToString());
 		var processStartInfo = new ProcessStartInfo
 		{
 			FileName = executablePath,
