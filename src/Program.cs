@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Text;
 
 public class Program
 {
@@ -21,17 +23,13 @@ public class Program
 				break;
 			}
 
-			switch (command)
+			if (IsBuiltInCommand(command))
 			{
-				case ECHO_COMMAND:	
-					EchoArguments(args);
-					break;
-				case TYPE_COMMAND:
-					PrintCommandType(args[0]);
-					break;
-				default:
-					Console.WriteLine($"{command}: command not found");
-					break;
+				RunBuiltIn(command);
+			}
+			else
+			{
+				RunExecutable(command, args);
 			}
 		}
     }
@@ -46,11 +44,49 @@ public class Program
 			throw new Exception("No input received!");
 		}
 
-		var input = inputLine.Split(" ");
+		var input = inputLine.Split(' ');
 		var command = input[0];
-		var args = input.Length > 1 ? input[1..].AsReadOnly() : [];
+		var args = input.Length > 1 ? input[1..]?.AsReadOnly() : [];
 
 		return (command, args);
+    }
+
+	private static void RunBuiltIn(string command)
+	{
+		switch (command)
+		{
+			case ECHO_COMMAND:	
+				EchoArguments(args);
+				break;
+			case TYPE_COMMAND:
+				PrintCommandType(args[0]);
+				break;
+			default:
+				Console.WriteLine($"{command}: command not found");
+				break;
+		}
+	}
+
+	private static void RunExecutable(string executable, ReadOnlyCollection<string> args)
+	{
+		if (!TryGetExecutablePath(executable, out string executablePath))
+		{
+			Console.WriteLine($"{command}: not found");
+			return;
+		}
+
+		var processStartInfo = new ProcessStartInfo
+		{
+			FileName = executablePath,
+			ArgumentList = args,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+			UseShellExecute = false,
+			CreateNoWindow = true,
+		};
+
+        using var process = Process.Start(processStartInfo);
+		process?.WaitForExit();
     }
 
 	private static void EchoArguments(ReadOnlyCollection<string> args)
@@ -58,7 +94,7 @@ public class Program
 		foreach (var arg in args)
 		{
 			Console.Write(arg);
-			Console.Write(" ");
+			Console.Write(' ');
 		}
 
 		Console.WriteLine();
@@ -66,13 +102,13 @@ public class Program
 
 	private static void PrintCommandType(string command)
 	{
-		if (BuiltInCommands.Contains(command))
+		if (IsBuiltInCommand(command))
 		{
 			Console.WriteLine($"{command} is a shell builtin");
 			return;
 		}
 
-		if (TryCheckExecutableCommand(command, out string executablePath))
+		if (TryGetExecutablePath(command, out string executablePath))
 		{
 			Console.WriteLine($"{command} is {executablePath}");
 			return;
@@ -81,7 +117,9 @@ public class Program
 		Console.WriteLine($"{command}: not found");
 	}
 
-	private static bool TryCheckExecutableCommand(string fileName, out string containingExecutablePath)
+	private static bool IsBuiltInCommand(string command) => BuiltInCommands.Contains(command);
+
+	private static bool TryGetExecutablePath(string fileName, out string containingExecutablePath)
 	{
 		containingExecutablePath = string.Empty;
 
