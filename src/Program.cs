@@ -79,6 +79,7 @@ public class Program
 		foreach (var arg in args)
 		{
 			builder.Append(arg);
+			builder.Append(' ');
 		}
 
 		Console.WriteLine(builder.ToString());
