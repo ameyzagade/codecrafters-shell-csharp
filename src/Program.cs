@@ -66,13 +66,60 @@ public class Program
 
 	private static void PrintCommandType(string command)
 	{
-		if (!BuiltInCommands.Contains(command))
+		if (BuiltInCommands.Contains(command))
 		{
-			Console.WriteLine($"{command}: not found");
-
+			Console.WriteLine($"{command} is a shell builtin");
 			return;
 		}
-		
-		Console.WriteLine($"{command} is a shell builtin");
+
+		if (TryCheckExecutableCommand(command, out string executablePath))
+		{
+			Console.WriteLine($"{command} is {executablePath}");
+			return;
+		}
+
+		Console.WriteLine($"{command}: not found");
+	}
+
+	private static bool TryCheckExecutableCommand(string fileName, out string containingExecutablePath)
+	{
+		containingExecutablePath = string.Empty;
+
+		var pathVariableValue = Environment.GetEnvironmentVariable("PATH");
+		if (string.IsNullOrEmpty(pathVariableValue))
+		{
+			return false;
+		}
+
+		var executablePaths = pathVariableValue.Split(Path.PathSeparator);
+		foreach (var executablePath in executablePaths)
+		{
+			var filePath = Path.Combine(executablePath, fileName);
+			if (!File.Exists(filePath))
+			{
+				continue;
+			}
+
+			if (CheckFileExecutableFlag(filePath))
+			{
+				containingExecutablePath = filePath;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static bool CheckFileExecutableFlag(string filePath)
+	{
+		if (!(OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()))
+		{
+			return true;
+		}
+
+		var fileMode = File.GetUnixFileMode(filePath);
+		var executeMask = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+			
+		return (fileMode & executeMask) != 0;
 	}
 }
