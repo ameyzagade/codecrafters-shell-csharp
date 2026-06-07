@@ -27,6 +27,7 @@ public class Program
 					EchoArguments(args);
 					break;
 				case TYPE_COMMAND:
+					Console.WriteLine(command);
 					PrintCommandType(command);
 					break;
 				default:
