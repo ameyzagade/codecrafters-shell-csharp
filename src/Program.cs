@@ -19,6 +19,11 @@ public class Program
 			PromptUser();
 
 			var (command, argString) = ReadAndExtractCommandWithArgumentString();
+			if (command.Equals(string.Empty, StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
 			if (command.Equals(EXIT_COMMAND, StringComparison.OrdinalIgnoreCase))
 			{
 				break;
@@ -42,7 +47,7 @@ public class Program
 		string? inputLine = Console.ReadLine();
 		if (string.IsNullOrWhiteSpace(inputLine))
 		{
-			throw new Exception("No input received!");
+			return (string.Empty, string.Empty);
 		}
 
 		var firstSpaceCharacterPosition = inputLine.IndexOf(' ', 0);
@@ -119,6 +124,17 @@ public class Program
 		if (!Path.IsPathFullyQualified(argString))
 		{
 			path = Path.Combine(Directory.GetCurrentDirectory(), argString);
+		}
+
+		if (argString.Equals("~", StringComparison.OrdinalIgnoreCase))
+		{
+			var homeDirectoryPath = Environment.GetEnvironmentVariable("HOME");
+			if (string.IsNullOrEmpty(homeDirectoryPath))
+			{
+				throw new Exception("Home directory not found!");
+			}
+
+			path = homeDirectoryPath;
 		}
 
 		if (!Directory.Exists(path))
