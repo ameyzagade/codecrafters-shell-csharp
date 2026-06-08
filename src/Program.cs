@@ -7,8 +7,9 @@ public class Program
 	private const string EXIT_COMMAND = "exit";
 	private const string ECHO_COMMAND = "echo";
 	private const string TYPE_COMMAND = "type";
+	private const string PWD_COMMAND = "pwd";
 
-	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND];
+	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND, PWD_COMMAND];
 
 	public static void Main()
     {
@@ -59,6 +60,9 @@ public class Program
 			case TYPE_COMMAND:
 				PrintCommandType(argString);
 				break;
+			case PWD_COMMAND:
+				PrintCurrentDirectory();
+				break;
 			default:
 				Console.WriteLine($"{command}: command not found");
 				break;
@@ -67,7 +71,7 @@ public class Program
 
 	private static void RunExecutable(string executable, string argString)
 	{
-		if (!TryGetExecutablePath(executable, out string executablePath))
+		if (!TryGetExecutablePath(executable, out string _))
 		{
 			Console.WriteLine($"{executable}: not found");
 			return;
@@ -75,7 +79,7 @@ public class Program
 
 		var processStartInfo = new ProcessStartInfo
 		{
-			FileName = Path.GetFileName(executablePath),
+			FileName = Path.GetFileName(executable),
 			Arguments = argString,
 		};
 
@@ -101,6 +105,8 @@ public class Program
 
 		Console.WriteLine($"{command}: not found");
 	}
+
+	private static void PrintCurrentDirectory() => Console.WriteLine(Directory.GetCurrentDirectory());
 
 	private static bool IsBuiltInCommand(string command) => BuiltInCommands.Contains(command);
 
