@@ -114,13 +114,20 @@ public class Program
 
 	private static void ChangeDirectory(string argString)
 	{
-		if (!Directory.Exists(argString))
+		string path = argString;
+
+		if (!Path.IsPathFullyQualified(argString))
 		{
-			Console.WriteLine($"{CD_COMMAND}: {argString}: No such file or directory");
+			path = Path.Combine(Directory.GetCurrentDirectory(), argString);
+		}
+
+		if (!Directory.Exists(path))
+		{
+			Console.WriteLine($"{CD_COMMAND}: {path}: No such file or directory");
 			return;
 		}
 
-		Directory.SetCurrentDirectory(argString);
+		Directory.SetCurrentDirectory(path);
 	}
 
 	private static bool IsBuiltInCommand(string command) => BuiltInCommands.Contains(command);
