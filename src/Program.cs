@@ -8,8 +8,9 @@ public class Program
 	private const string ECHO_COMMAND = "echo";
 	private const string TYPE_COMMAND = "type";
 	private const string PWD_COMMAND = "pwd";
+	private const string CD_COMMAND = "cd";
 
-	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND, PWD_COMMAND];
+	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND, PWD_COMMAND, CD_COMMAND];
 
 	public static void Main()
     {
@@ -63,6 +64,9 @@ public class Program
 			case PWD_COMMAND:
 				PrintCurrentDirectory();
 				break;
+			case CD_COMMAND:
+				ChangeDirectory(argString);
+				break;
 			default:
 				Console.WriteLine($"{command}: command not found");
 				break;
@@ -107,6 +111,17 @@ public class Program
 	}
 
 	private static void PrintCurrentDirectory() => Console.WriteLine(Directory.GetCurrentDirectory());
+
+	private static void ChangeDirectory(string argString)
+	{
+		if (!Directory.Exists(argString))
+		{
+			Console.WriteLine($"{CD_COMMAND}: {argString}: No such file or directory");
+			return;
+		}
+
+		Directory.SetCurrentDirectory(argString);
+	}
 
 	private static bool IsBuiltInCommand(string command) => BuiltInCommands.Contains(command);
 
