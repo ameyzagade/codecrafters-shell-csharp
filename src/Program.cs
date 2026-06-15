@@ -65,7 +65,7 @@ public class Program
 	private static List<string> ExtractArguments(string argumentLine)
 	{
 		argumentLine = argumentLine.Trim();
-		
+
 		var args = new List<string>(argumentLine.Length / 2);
 		var processedArgumentBuilder = new StringBuilder(0, argumentLine.Length);
 		var previousChar = SEED_CHAR;
@@ -105,7 +105,6 @@ public class Program
 				default:
 					if (!inSingleQuote && char.IsWhiteSpace(previousChar))
 					{
-						processedArgumentBuilder.Append(WHITESPACE);
 						FlushArgument(processedArgumentBuilder, args);
 					}
 
