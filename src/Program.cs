@@ -33,11 +33,6 @@ public class Program
 				break;
 			}
 
-			foreach (var item in args)
-			{
-				System.Console.WriteLine(item);
-			}
-
 			if (IsBuiltInCommand(command))
 			{
 				RunBuiltIn(command, args);
