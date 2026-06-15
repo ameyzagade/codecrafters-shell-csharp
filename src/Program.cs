@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Text;
 
 public class Program
 {
@@ -44,19 +45,72 @@ public class Program
    
     private static (string, string) ReadAndExtractCommandWithArgumentString()
     {
-		string? inputLine = Console.ReadLine();
-		if (string.IsNullOrWhiteSpace(inputLine))
-		{
-			return (string.Empty, string.Empty);
-		}
+        string? inputLine = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(inputLine))
+        {
+            return (string.Empty, string.Empty);
+        }
 
-		var firstSpaceCharacterPosition = inputLine.IndexOf(' ', 0);
-		return firstSpaceCharacterPosition == -1 
-				? (inputLine, string.Empty)
-				: (inputLine[0..firstSpaceCharacterPosition], inputLine[(firstSpaceCharacterPosition+1)..]);
+        List<string> inputTokens = TokeniseInput(inputLine);
+		var command = inputTokens[0];
+        var args = inputTokens.Count == 0 ? string.Empty : string.Join(' ', inputTokens[1..]);
+
+        return (command, args);
     }
 
-	private static void RunBuiltIn(string command, string argString)
+    private static List<string> TokeniseInput(string inputLine)
+    {
+        var tokens = new List<string>(inputLine.Length / 2);
+        var inSingleQuote = false;
+        var tokenBuilder = new StringBuilder();
+
+        foreach (var ch in inputLine)
+        {
+            switch (ch)
+            {
+                case '\'':
+                    inSingleQuote = !inSingleQuote; // toggle the state if you see a single quote
+                    if (!inSingleQuote)
+                    {
+                        if (tokenBuilder.Length == 0) continue; // empty quotes encountered
+
+                        FlushToken(tokens, tokenBuilder);
+                    }
+                    break;
+                case ' ':
+                    if (inSingleQuote || tokenBuilder.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    FlushToken(tokens, tokenBuilder);
+                    break;
+                default:
+                    tokenBuilder.Append(ch);
+                    break;
+            }
+        }
+
+        if (inSingleQuote)
+        {
+            throw new Exception("Quotes not closed");
+        }
+
+        if (tokenBuilder.Length > 0)
+        {
+			FlushToken(tokens, tokenBuilder);
+        }
+
+        return tokens;
+    }
+
+    private static void FlushToken(List<string> tokens, StringBuilder tokenBuilder)
+    {
+        tokens.Add(tokenBuilder.ToString());
+        tokenBuilder.Clear();
+    }
+
+    private static void RunBuiltIn(string command, string argString)
 	{
 		switch (command)
 		{
@@ -119,14 +173,8 @@ public class Program
 
 	private static void ChangeDirectory(string argString)
 	{
-		string path = argString;
-
-		if (!Path.IsPathFullyQualified(argString))
-		{
-			path = Path.Combine(Directory.GetCurrentDirectory(), argString);
-		}
-
-		if (argString.Equals("~", StringComparison.OrdinalIgnoreCase))
+		var path = argString;
+		if (path.StartsWith("~", StringComparison.OrdinalIgnoreCase))
 		{
 			var homeDirectoryPath = Environment.GetEnvironmentVariable("HOME");
 			if (string.IsNullOrEmpty(homeDirectoryPath))
@@ -134,7 +182,15 @@ public class Program
 				throw new Exception("Home directory not found!");
 			}
 
-			path = homeDirectoryPath;
+			path = path.Equals("~", StringComparison.OrdinalIgnoreCase) ? homeDirectoryPath : Path.Combine(homeDirectoryPath, argString[2..]);
+			Directory.SetCurrentDirectory(path);
+
+			return;
+		}
+
+		if (!Path.IsPathFullyQualified(path))
+		{
+			path = Path.Combine(Directory.GetCurrentDirectory(), argString);
 		}
 
 		if (!Directory.Exists(path))
