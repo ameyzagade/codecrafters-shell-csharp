@@ -78,16 +78,16 @@ public class Program
                     }
                     break;
                 case ' ':
+					if (tokenBuilder.Length == 0)
+					{
+						continue;
+					}
+					
                     if (inSingleQuote)
                     {
 						SaveToken(tokenBuilder, ch);
                         continue;
                     }
-
-					if (tokenBuilder.Length == 0)
-					{
-						continue;
-					}
 
                     FlushToken(tokens, tokenBuilder);
                     break;
