@@ -64,6 +64,8 @@ public class Program
 
 	private static List<string> ExtractArguments(string argumentLine)
 	{
+		argumentLine = argumentLine.Trim();
+		
 		var args = new List<string>(argumentLine.Length / 2);
 		var processedArgumentBuilder = new StringBuilder(0, argumentLine.Length);
 		var previousChar = SEED_CHAR;
@@ -179,7 +181,7 @@ public class Program
 		process?.WaitForExit();
     }
 
-	private static void EchoArguments(List<string> args) => Console.WriteLine(string.Join("", args));
+	private static void EchoArguments(List<string> args) => Console.WriteLine(string.Join(" ", args));
 
 	private static void PrintCommandType(string command)
 	{
