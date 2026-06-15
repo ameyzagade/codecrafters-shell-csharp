@@ -53,7 +53,7 @@ public class Program
 
         List<string> inputTokens = TokeniseInput(inputLine);
 		var command = inputTokens[0];
-        var args = inputTokens.Count == 0 ? string.Empty : string.Join(' ', inputTokens[1..]);
+        var args = inputTokens.Count == 0 ? string.Empty : string.Concat(inputTokens[1..]);
 
         return (command, args);
     }
@@ -69,20 +69,16 @@ public class Program
             switch (ch)
             {
                 case '\'':
-                    inSingleQuote = !inSingleQuote; // toggle the state if you see a single quote
+					// toggle the state if you see a single quote
+                    inSingleQuote = !inSingleQuote; 
+
+					// if we get a matching quote, the flag willbe false
                     if (!inSingleQuote)
                     {
-                        if (tokenBuilder.Length == 0) continue; // empty quotes encountered
-
                         FlushToken(tokens, tokenBuilder);
                     }
                     break;
                 case ' ':
-					if (tokenBuilder.Length == 0)
-					{
-						continue;
-					}
-					
                     if (inSingleQuote)
                     {
 						SaveToken(tokenBuilder, ch);
@@ -102,11 +98,7 @@ public class Program
             throw new Exception("Quotes not closed");
         }
 
-        if (tokenBuilder.Length > 0)
-        {
-			FlushToken(tokens, tokenBuilder);
-        }
-
+		FlushToken(tokens, tokenBuilder);
         return tokens;
     }
 
@@ -114,6 +106,11 @@ public class Program
 
     private static void FlushToken(List<string> tokens, StringBuilder tokenBuilder)
     {
+		if (tokenBuilder.Length == 0)
+		{
+			return;
+		}
+
         tokens.Add(tokenBuilder.ToString());
         tokenBuilder.Clear();
     }
