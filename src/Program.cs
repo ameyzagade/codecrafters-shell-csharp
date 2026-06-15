@@ -62,6 +62,7 @@ public class Program
     {
         var tokens = new List<string>(inputLine.Length / 2);
         var inSingleQuote = false;
+		var isLastCharWhitespace = false;
         var tokenBuilder = new StringBuilder();
 
         foreach (var ch in inputLine)
@@ -84,6 +85,12 @@ public class Program
 						SaveToken(tokenBuilder, ch);
                         continue;
                     }
+
+					isLastCharWhitespace = !isLastCharWhitespace;
+					if (!isLastCharWhitespace)
+					{
+						SaveToken(tokenBuilder, ch);
+					}
 
                     FlushToken(tokens, tokenBuilder);
                     break;
