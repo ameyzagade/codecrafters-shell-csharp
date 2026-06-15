@@ -51,76 +51,62 @@ public class Program
             return (string.Empty, string.Empty);
         }
 
-        List<string> inputTokens = TokeniseInput(inputLine);
-		var command = inputTokens[0];
-        var args = inputTokens.Count == 0 ? string.Empty : string.Concat(inputTokens[1..]);
+		var modifiedInputLine = inputLine.Trim();
+		var commandKeywordEndIndex = modifiedInputLine.IndexOf(' ', 0);
 
-        return (command, args);
+		return commandKeywordEndIndex == -1
+				? (inputLine, string.Empty)
+				: (inputLine[..commandKeywordEndIndex], ProcessArguments(inputLine[(commandKeywordEndIndex + 1)..]));
     }
 
-    private static List<string> TokeniseInput(string inputLine)
-    {
-        var tokens = new List<string>(inputLine.Length / 2);
-        var inSingleQuote = false;
-		var isLastCharWhitespace = false;
-        var tokenBuilder = new StringBuilder();
-
-        foreach (var ch in inputLine)
-        {
-            switch (ch)
-            {
-                case '\'':
-					// toggle the state if you see a single quote
-                    inSingleQuote = !inSingleQuote; 
-
-					// if we get a matching quote, the flag willbe false
-                    if (!inSingleQuote)
-                    {
-                        FlushToken(tokens, tokenBuilder);
-                    }
-                    break;
-                case ' ':
-                    if (inSingleQuote)
-                    {
-						SaveToken(tokenBuilder, ch);
-                        continue;
-                    }
-
-					isLastCharWhitespace = !isLastCharWhitespace;
-					if (!isLastCharWhitespace)
+	private static string ProcessArguments(string argumentLine)
+	{
+		var processedArgLineString = new StringBuilder();
+		var previousChar = '\0';
+		var inSingleQuote = false;
+	
+		foreach (var ch in argumentLine)
+		{
+			switch (ch)
+			{
+				case ' ':
+					if (inSingleQuote)
 					{
-						SaveToken(tokenBuilder, ch);
+						processedArgLineString.Append(' ');
+					}
+					break;
+				case '\'':
+					inSingleQuote = !inSingleQuote;
+					if (inSingleQuote)
+					{
+						if (previousChar == '\'')
+						{
+							inSingleQuote = false;
+						}
+
+						if (previousChar == ' ')
+						{
+							processedArgLineString.Append(' ');
+						}
 					}
 
-                    FlushToken(tokens, tokenBuilder);
-                    break;
-                default:
-					SaveToken(tokenBuilder, ch);
-                    break;
-            }
-        }
+					break;
+				default:
+					if (char.IsWhiteSpace(previousChar))
+					{
+						processedArgLineString.Append(previousChar);
+					}
 
-        if (inSingleQuote)
-        {
-            throw new Exception("Quotes not closed");
-        }
+					processedArgLineString.Append(ch);
+					break;
+			}
 
-		FlushToken(tokens, tokenBuilder);
-        return tokens;
-    }
-
-	private static void SaveToken(StringBuilder tokenBuilder, char token) => tokenBuilder.Append(token);
-
-    private static void FlushToken(List<string> tokens, StringBuilder tokenBuilder)
-    {
-		if (tokenBuilder.Length == 0)
-		{
-			return;
+			// update previous char state
+			previousChar = ch;			
 		}
 
-        tokens.Add(tokenBuilder.ToString());
-        tokenBuilder.Clear();
-    }
+		return processedArgLineString.ToString();
+	}
 
     private static void RunBuiltIn(string command, string argString)
 	{
