@@ -92,7 +92,7 @@ public class Program
 
 					break;
 				default:
-					if (char.IsWhiteSpace(previousChar))
+					if (!inSingleQuote && char.IsWhiteSpace(previousChar))
 					{
 						processedArgLineString.Append(previousChar);
 					}
