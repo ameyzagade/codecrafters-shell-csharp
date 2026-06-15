@@ -94,6 +94,11 @@ public class Program
 						}
 					}
 
+					if (!inSingleQuote)
+					{
+						FlushArgument(processedArgumentBuilder, args);
+					}
+
 					break;
 				default:
 					if (!inSingleQuote && char.IsWhiteSpace(previousChar))
