@@ -10,6 +10,9 @@ public class Program
 	private const string TYPE_COMMAND = "type";
 	private const string PWD_COMMAND = "pwd";
 	private const string CD_COMMAND = "cd";
+	private const char WHITESPACE = ' ';
+	private const char SINGLE_QUOTE = '\'';
+	private const char SEED_CHAR = '\0';
 
 	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND, PWD_COMMAND, CD_COMMAND];
 
@@ -19,7 +22,7 @@ public class Program
 		{
 			PromptUser();
 
-			var (command, argString) = ReadAndExtractCommandWithArgumentString();
+			var (command, args) = ReadAndExtractCommandWithArgumentString();
 			if (command.Equals(string.Empty, StringComparison.OrdinalIgnoreCase))
 			{
 				continue;
@@ -32,61 +35,62 @@ public class Program
 
 			if (IsBuiltInCommand(command))
 			{
-				RunBuiltIn(command, argString);
+				RunBuiltIn(command, args);
 			}
 			else
 			{
-				RunExecutable(command, argString);
+				RunExecutable(command, args);
 			}
 		}
     }
 
     private static void PromptUser() => Console.Write("$ ");
    
-    private static (string, string) ReadAndExtractCommandWithArgumentString()
+    private static (string, List<string>) ReadAndExtractCommandWithArgumentString()
     {
         string? inputLine = Console.ReadLine();
         if (string.IsNullOrWhiteSpace(inputLine))
         {
-            return (string.Empty, string.Empty);
+            return (string.Empty, []);
         }
 
 		var modifiedInputLine = inputLine.Trim();
 		var commandKeywordEndIndex = modifiedInputLine.IndexOf(' ', 0);
 
 		return commandKeywordEndIndex == -1
-				? (inputLine, string.Empty)
-				: (inputLine[..commandKeywordEndIndex], ProcessArguments(inputLine[(commandKeywordEndIndex + 1)..]));
+				? (inputLine, [])
+				: (inputLine[..commandKeywordEndIndex], ExtractArguments(inputLine[(commandKeywordEndIndex + 1)..]));
     }
 
-	private static string ProcessArguments(string argumentLine)
+	private static List<string> ExtractArguments(string argumentLine)
 	{
-		var processedArgLineString = new StringBuilder();
-		var previousChar = '\0';
+		var args = new List<string>(argumentLine.Length / 2);
+		var processedArgumentBuilder = new StringBuilder(0, argumentLine.Length);
+		var previousChar = SEED_CHAR;
 		var inSingleQuote = false;
 	
-		foreach (var ch in argumentLine)
+		foreach (var token in argumentLine)
 		{
-			switch (ch)
+			switch (token)
 			{
-				case ' ':
+				case WHITESPACE:
 					if (inSingleQuote)
 					{
-						processedArgLineString.Append(' ');
+						processedArgumentBuilder.Append(WHITESPACE);
 					}
 					break;
-				case '\'':
+				case SINGLE_QUOTE:
 					inSingleQuote = !inSingleQuote;
 					if (inSingleQuote)
 					{
-						if (previousChar == '\'')
+						if (previousChar.Equals(SINGLE_QUOTE))
 						{
 							inSingleQuote = false;
 						}
 
-						if (previousChar == ' ')
+						if (previousChar.Equals(WHITESPACE))
 						{
-							processedArgLineString.Append(' ');
+							processedArgumentBuilder.Append(WHITESPACE);
 						}
 					}
 
@@ -94,35 +98,52 @@ public class Program
 				default:
 					if (!inSingleQuote && char.IsWhiteSpace(previousChar))
 					{
-						processedArgLineString.Append(previousChar);
+						processedArgumentBuilder.Append(WHITESPACE);
+						FlushArgument(processedArgumentBuilder, args);
 					}
 
-					processedArgLineString.Append(ch);
+					AppendToken(processedArgumentBuilder, token);
 					break;
 			}
 
 			// update previous char state
-			previousChar = ch;			
+			previousChar = token;			
 		}
 
-		return processedArgLineString.ToString();
+		// flush if anything's left
+		FlushArgument(processedArgumentBuilder, args);
+
+		return args;
 	}
 
-    private static void RunBuiltIn(string command, string argString)
+	private static void AppendToken(StringBuilder argumentBuilder, char token) => argumentBuilder.Append(token);
+
+	private static void FlushArgument(StringBuilder argumentBuilder, List<string> args)
+	{
+		if (argumentBuilder.Length == 0)
+		{
+			return;
+		}
+
+		args.Add(argumentBuilder.ToString());
+		argumentBuilder.Clear();
+	}
+
+    private static void RunBuiltIn(string command, List<string> args)
 	{
 		switch (command)
 		{
 			case ECHO_COMMAND:	
-				EchoArguments(argString);
+				EchoArguments(args);
 				break;
 			case TYPE_COMMAND:
-				PrintCommandType(argString);
+				PrintCommandType(args[0]);
 				break;
 			case PWD_COMMAND:
 				PrintCurrentDirectory();
 				break;
 			case CD_COMMAND:
-				ChangeDirectory(argString);
+				ChangeDirectory(args[0]);
 				break;
 			default:
 				Console.WriteLine($"{command}: command not found");
@@ -130,7 +151,7 @@ public class Program
 		}
 	}
 
-	private static void RunExecutable(string executable, string argString)
+	private static void RunExecutable(string executable, List<string> args)
 	{
 		if (!TryGetExecutablePath(executable, out string _))
 		{
@@ -141,14 +162,19 @@ public class Program
 		var processStartInfo = new ProcessStartInfo
 		{
 			FileName = Path.GetFileName(executable),
-			Arguments = argString,
+			UseShellExecute = false,
 		};
+
+		foreach (var arg in args)
+		{
+			processStartInfo.ArgumentList.Add(arg);
+		}
 
         using var process = Process.Start(processStartInfo);
 		process?.WaitForExit();
     }
 
-	private static void EchoArguments(string argString) => Console.WriteLine(argString);
+	private static void EchoArguments(List<string> args) => Console.WriteLine(string.Join("", args));
 
 	private static void PrintCommandType(string command)
 	{
