@@ -80,34 +80,15 @@ public class Program
 					{
 						processedArgumentBuilder.Append(WHITESPACE);
 					}
+					else
+					{
+						FlushArgument(processedArgumentBuilder, args);
+					}
 					break;
 				case SINGLE_QUOTE:
-					inSingleQuote = !inSingleQuote;
-					if (inSingleQuote)
-					{
-						if (previousChar.Equals(SINGLE_QUOTE))
-						{
-							inSingleQuote = false;
-						}
-
-						if (previousChar.Equals(WHITESPACE))
-						{
-							processedArgumentBuilder.Append(WHITESPACE);
-						}
-					}
-
-					if (!inSingleQuote)
-					{
-						FlushArgument(processedArgumentBuilder, args);
-					}
-
+				    inSingleQuote = !inSingleQuote;
 					break;
 				default:
-					if (!inSingleQuote && char.IsWhiteSpace(previousChar))
-					{
-						FlushArgument(processedArgumentBuilder, args);
-					}
-
 					AppendToken(processedArgumentBuilder, token);
 					break;
 			}
@@ -180,9 +161,9 @@ public class Program
 		process?.WaitForExit();
     }
 
-	private static void EchoArguments(List<string> args) => Console.WriteLine(string.Join(" ", args));
+    private static void EchoArguments(List<string> args) => Console.WriteLine(string.Join(" ", args));
 
-	private static void PrintCommandType(string command)
+    private static void PrintCommandType(string command)
 	{
 		if (IsBuiltInCommand(command))
 		{
