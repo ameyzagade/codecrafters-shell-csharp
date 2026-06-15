@@ -78,15 +78,21 @@ public class Program
                     }
                     break;
                 case ' ':
-                    if (inSingleQuote || tokenBuilder.Length == 0)
+                    if (inSingleQuote)
                     {
+						SaveToken(tokenBuilder, ch);
                         continue;
                     }
+
+					if (tokenBuilder.Length == 0)
+					{
+						continue;
+					}
 
                     FlushToken(tokens, tokenBuilder);
                     break;
                 default:
-                    tokenBuilder.Append(ch);
+					SaveToken(tokenBuilder, ch);
                     break;
             }
         }
@@ -103,6 +109,8 @@ public class Program
 
         return tokens;
     }
+
+	private static void SaveToken(StringBuilder tokenBuilder, char token) => tokenBuilder.Append(token);
 
     private static void FlushToken(List<string> tokens, StringBuilder tokenBuilder)
     {
