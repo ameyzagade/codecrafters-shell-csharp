@@ -100,14 +100,14 @@ public class Program
 					}
 					break;
 				case SpecialCharacters.SINGLE_QUOTE:
-					if (!inSingleQuote && isEscapeChar)
+					if (inDoubleQuote)
+					{
+						AppendToken(processedArgumentBuilder, token);
+					}
+					else if (!inSingleQuote && isEscapeChar)
 					{
 						AppendToken(processedArgumentBuilder, token);
 						isEscapeChar = false;
-					}
-					else if (inDoubleQuote)
-					{
-						AppendToken(processedArgumentBuilder, token);
 					}
 					else
 					{
@@ -116,7 +116,7 @@ public class Program
 
 					break;
 				case SpecialCharacters.DOUBLE_QUOTE:
-					if (isEscapeChar)
+					if (inSingleQuote || isEscapeChar)
 					{
 						AppendToken(processedArgumentBuilder, token);
 						isEscapeChar = false;
@@ -125,10 +125,9 @@ public class Program
 					{
 						inDoubleQuote = !inDoubleQuote;
 					}
-
 					break;
 				case SpecialCharacters.BACKSLASH:
-					if (isEscapeChar)
+					if (inSingleQuote || (inDoubleQuote && isEscapeChar))
 					{
 						AppendToken(processedArgumentBuilder, token);
 						isEscapeChar = false;
