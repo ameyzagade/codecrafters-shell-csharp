@@ -110,10 +110,8 @@ public class Program
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
-					else
-					{
-						inDoubleQuote = !inDoubleQuote;
-					}
+
+					inDoubleQuote = !inDoubleQuote;
 					break;
 				case SpecialCharacters.BACKSLASH:
 					if (inSingleQuote || previousChar.Equals(SpecialCharacters.BACKSLASH))
