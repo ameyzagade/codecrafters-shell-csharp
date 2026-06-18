@@ -76,7 +76,7 @@ public class Program
 
 		var args = new List<string>(argumentLine.Length / 2);
 		var processedArgumentBuilder = new StringBuilder(0, argumentLine.Length);
-		var previousChar = '\0';
+		var isEscapeChar = false;
 		var inSingleQuote = false;
 		var inDoubleQuote = false;
 	
@@ -85,7 +85,12 @@ public class Program
 			switch (token)
 			{
 				case SpecialCharacters.WHITESPACE:
-					if (previousChar.Equals(SpecialCharacters.BACKSLASH) || inSingleQuote || inDoubleQuote)
+					if (isEscapeChar)
+					{
+						AppendToken(processedArgumentBuilder, token);
+						isEscapeChar = false;
+					}
+					else if (inSingleQuote || inDoubleQuote)
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
@@ -95,7 +100,12 @@ public class Program
 					}
 					break;
 				case SpecialCharacters.SINGLE_QUOTE:
-					if ((!inSingleQuote && previousChar.Equals(SpecialCharacters.BACKSLASH)) || inDoubleQuote)
+					if (!inSingleQuote && isEscapeChar)
+					{
+						AppendToken(processedArgumentBuilder, token);
+						isEscapeChar = false;
+					}
+					else if (inDoubleQuote)
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
@@ -106,25 +116,30 @@ public class Program
 
 					break;
 				case SpecialCharacters.DOUBLE_QUOTE:
-					if (previousChar.Equals(SpecialCharacters.BACKSLASH))
+					if (isEscapeChar)
 					{
 						AppendToken(processedArgumentBuilder, token);
+						isEscapeChar = false;
+					}
+					else
+					{
+						inDoubleQuote = !inDoubleQuote;
 					}
 
-					inDoubleQuote = !inDoubleQuote;
 					break;
 				case SpecialCharacters.BACKSLASH:
-					if (inSingleQuote || previousChar.Equals(SpecialCharacters.BACKSLASH))
+					if (isEscapeChar)
 					{
 						AppendToken(processedArgumentBuilder, token);
+						isEscapeChar = false;
 					}
+
+					isEscapeChar = !isEscapeChar;
 					break;
 				default:
 					AppendToken(processedArgumentBuilder, token);
 					break;
 			}
-
-			previousChar = token;
 		}
 
 		if (inSingleQuote || inDoubleQuote)
