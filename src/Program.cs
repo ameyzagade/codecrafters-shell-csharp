@@ -88,14 +88,15 @@ public class Program
 					}
 					break;
 				case SINGLE_QUOTE:
-					if (previousChar.Equals(BACKSLASH) || inDoubleQuote)
+					if (inDoubleQuote)
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
 					else
 					{
-					    inSingleQuote = !inSingleQuote;
+						inSingleQuote = !inSingleQuote;
 					}
+
 					break;
 				case DOUBLE_QUOTE:
 					if (previousChar.Equals(BACKSLASH))
