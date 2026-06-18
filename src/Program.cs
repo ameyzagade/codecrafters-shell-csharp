@@ -133,8 +133,10 @@ public class Program
 						AppendToken(processedArgumentBuilder, token);
 						isEscapeChar = false;
 					}
-
-					isEscapeChar = !isEscapeChar;
+					else
+					{
+						isEscapeChar = !isEscapeChar;
+					}
 					break;
 				default:
 					AppendToken(processedArgumentBuilder, token);
