@@ -10,10 +10,17 @@ public class Program
 	private const string TYPE_COMMAND = "type";
 	private const string PWD_COMMAND = "pwd";
 	private const string CD_COMMAND = "cd";
-	private const char WHITESPACE = ' ';
-	private const char SINGLE_QUOTE = '\'';
-	private const char DOUBLE_QUOTE = '\"';
-	private const char BACKSLASH = '\\';
+
+	class SpecialCharacters
+	{
+		public const char WHITESPACE = ' ';
+		public const char SINGLE_QUOTE = '\'';
+		public const char DOUBLE_QUOTE = '\"';
+		public const char BACKSLASH = '\\';
+		public const char DOLLAR = '$';
+		public const char BACKTICK = '`';
+		public const char NEWLINE = '\n';
+	}
 
 	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND, PWD_COMMAND, CD_COMMAND];
 
@@ -77,8 +84,8 @@ public class Program
 		{
 			switch (token)
 			{
-				case WHITESPACE:
-					if (previousChar.Equals(BACKSLASH) || inSingleQuote || inDoubleQuote)
+				case SpecialCharacters.WHITESPACE:
+					if (previousChar.Equals(SpecialCharacters.BACKSLASH) || inSingleQuote || inDoubleQuote)
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
@@ -87,8 +94,8 @@ public class Program
 						FlushArgument(processedArgumentBuilder, args);
 					}
 					break;
-				case SINGLE_QUOTE:
-					if ((!inSingleQuote && previousChar.Equals(BACKSLASH)) || inDoubleQuote)
+				case SpecialCharacters.SINGLE_QUOTE:
+					if ((!inSingleQuote && previousChar.Equals(SpecialCharacters.BACKSLASH)) || inDoubleQuote)
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
@@ -98,8 +105,8 @@ public class Program
 					}
 
 					break;
-				case DOUBLE_QUOTE:
-					if (previousChar.Equals(BACKSLASH))
+				case SpecialCharacters.DOUBLE_QUOTE:
+					if (previousChar.Equals(SpecialCharacters.BACKSLASH))
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
@@ -108,8 +115,8 @@ public class Program
 						inDoubleQuote = !inDoubleQuote;
 					}
 					break;
-				case BACKSLASH:
-					if (inSingleQuote || previousChar.Equals(BACKSLASH))
+				case SpecialCharacters.BACKSLASH:
+					if (inSingleQuote || previousChar.Equals(SpecialCharacters.BACKSLASH))
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
