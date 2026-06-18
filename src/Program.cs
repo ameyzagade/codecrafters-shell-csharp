@@ -155,7 +155,7 @@ public class Program
 
 		var processStartInfo = new ProcessStartInfo
 		{
-			FileName = executablePath,
+			FileName = Path.GetFileName(executable),
 			UseShellExecute = false,
 		};
 
