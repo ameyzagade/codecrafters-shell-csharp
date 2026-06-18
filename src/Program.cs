@@ -13,6 +13,7 @@ public class Program
 	private const char WHITESPACE = ' ';
 	private const char SINGLE_QUOTE = '\'';
 	private const char DOUBLE_QUOTE = '\"';
+	private const char BACKSLASH = '\\';
 
 	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND, PWD_COMMAND, CD_COMMAND];
 
@@ -68,11 +69,20 @@ public class Program
 
 		var args = new List<string>(argumentLine.Length / 2);
 		var processedArgumentBuilder = new StringBuilder(0, argumentLine.Length);
+		var previousChar = '\0';
 		var inSingleQuote = false;
 		var inDoubleQuote = false;
 	
 		foreach (var token in argumentLine)
 		{
+			if (previousChar.Equals(BACKSLASH))
+			{
+				processedArgumentBuilder.Append(token);
+				previousChar = token;
+				
+				continue;
+			}
+
 			switch (token)
 			{
 				case WHITESPACE:
@@ -98,10 +108,14 @@ public class Program
 				case DOUBLE_QUOTE:
 					inDoubleQuote = !inDoubleQuote;
 					break;
+				case BACKSLASH:
+					break;
 				default:
 					AppendToken(processedArgumentBuilder, token);
 					break;
 			}
+
+			previousChar = token;
 		}
 
 		if (inSingleQuote || inDoubleQuote)
