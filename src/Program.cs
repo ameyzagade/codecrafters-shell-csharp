@@ -75,20 +75,12 @@ public class Program
 	
 		foreach (var token in argumentLine)
 		{
-			if (previousChar.Equals(BACKSLASH))
-			{
-				processedArgumentBuilder.Append(token);
-				previousChar = token;
-				
-				continue;
-			}
-
 			switch (token)
 			{
 				case WHITESPACE:
-					if (inSingleQuote || inDoubleQuote)
+					if (previousChar.Equals(BACKSLASH) || inSingleQuote || inDoubleQuote)
 					{
-						processedArgumentBuilder.Append(WHITESPACE);
+						AppendToken(processedArgumentBuilder, token);
 					}
 					else
 					{
@@ -96,9 +88,9 @@ public class Program
 					}
 					break;
 				case SINGLE_QUOTE:
-					if (inDoubleQuote)
+					if (previousChar.Equals(BACKSLASH) || inDoubleQuote)
 					{
-						processedArgumentBuilder.Append(SINGLE_QUOTE);
+						AppendToken(processedArgumentBuilder, token);
 					}
 					else
 					{
@@ -106,9 +98,20 @@ public class Program
 					}
 					break;
 				case DOUBLE_QUOTE:
-					inDoubleQuote = !inDoubleQuote;
+					if (previousChar.Equals(BACKSLASH))
+					{
+						AppendToken(processedArgumentBuilder, token);
+					}
+					else
+					{
+						inDoubleQuote = !inDoubleQuote;
+					}
 					break;
 				case BACKSLASH:
+					if (inSingleQuote)
+					{
+						AppendToken(processedArgumentBuilder, token);
+					}
 					break;
 				default:
 					AppendToken(processedArgumentBuilder, token);
