@@ -12,7 +12,7 @@ public class Program
 	private const string CD_COMMAND = "cd";
 	private const char WHITESPACE = ' ';
 	private const char SINGLE_QUOTE = '\'';
-	private const char SEED_CHAR = '\0';
+	private const char DOUBLE_QUOTE = '\"';
 
 	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND, PWD_COMMAND, CD_COMMAND];
 
@@ -68,15 +68,15 @@ public class Program
 
 		var args = new List<string>(argumentLine.Length / 2);
 		var processedArgumentBuilder = new StringBuilder(0, argumentLine.Length);
-		var previousChar = SEED_CHAR;
 		var inSingleQuote = false;
+		var inDoubleQuote = false;
 	
 		foreach (var token in argumentLine)
 		{
 			switch (token)
 			{
 				case WHITESPACE:
-					if (inSingleQuote)
+					if (inSingleQuote || inDoubleQuote)
 					{
 						processedArgumentBuilder.Append(WHITESPACE);
 					}
@@ -86,15 +86,27 @@ public class Program
 					}
 					break;
 				case SINGLE_QUOTE:
-				    inSingleQuote = !inSingleQuote;
+					if (inDoubleQuote)
+					{
+						processedArgumentBuilder.Append(SINGLE_QUOTE);
+					}
+					else
+					{
+					    inSingleQuote = !inSingleQuote;
+					}
+					break;
+				case DOUBLE_QUOTE:
+					inDoubleQuote = !inDoubleQuote;
 					break;
 				default:
 					AppendToken(processedArgumentBuilder, token);
 					break;
 			}
+		}
 
-			// update previous char state
-			previousChar = token;			
+		if (inSingleQuote || inDoubleQuote)
+		{
+			throw new Exception("Quotes not closed");
 		}
 
 		// flush if anything's left
