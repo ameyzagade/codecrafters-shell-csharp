@@ -1,112 +1,93 @@
-using System.Collections.Immutable;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text;
 
 public class Program
 {
-	private const string EXIT_COMMAND = "exit";
-	private const string ECHO_COMMAND = "echo";
-	private const string TYPE_COMMAND = "type";
-	private const string PWD_COMMAND = "pwd";
-	private const string CD_COMMAND = "cd";
-
-	class SpecialCharacters
+	private static readonly Dictionary<string, Action<IReadOnlyList<string>>> BuiltInCommands = new(StringComparer.OrdinalIgnoreCase)
 	{
-		public const char WHITESPACE = ' ';
-		public const char SINGLE_QUOTE = '\'';
-		public const char DOUBLE_QUOTE = '\"';
-		public const char BACKSLASH = '\\';
-		public const char DOLLAR = '$';
-		public const char BACKTICK = '`';
-		public const char NEWLINE = '\n';
-	}
-
-	private static readonly ImmutableList<string> BuiltInCommands = [EXIT_COMMAND, ECHO_COMMAND, TYPE_COMMAND, PWD_COMMAND, CD_COMMAND];
+		["echo"] = EchoArguments,
+		["type"] = PrintCommandType,
+		["pwd"] = PrintCurrentDirectory,
+		["cd"] = ChangeDirectory,
+		["exit"] = Exit,
+	};
 
 	public static void Main()
-    {
+	{
 		while (true)
 		{
 			PromptUser();
 
-			var (command, args) = ReadAndExtractCommandWithArgumentString();
-			if (command.Equals(string.Empty, StringComparison.OrdinalIgnoreCase))
+			var (command, args) = ReadAndExtractCommandWithArguments();
+			if (command.Length == 0)
 			{
 				continue;
 			}
 
-			if (command.Equals(EXIT_COMMAND, StringComparison.OrdinalIgnoreCase))
+			if (BuiltInCommands.TryGetValue(command, out var action))
 			{
-				break;
-			}
-
-			if (IsBuiltInCommand(command))
-			{
-				RunBuiltIn(command, args);
+				action(args);
 			}
 			else
 			{
 				RunExecutable(command, args);
 			}
 		}
-    }
+	}
 
-    private static void PromptUser() => Console.Write("$ ");
-   
-    private static (string, List<string>) ReadAndExtractCommandWithArgumentString()
-    {
-        string? inputLine = Console.ReadLine();
-        if (string.IsNullOrWhiteSpace(inputLine))
-        {
-            return (string.Empty, []);
-        }
+	private static void PromptUser() => Console.Write("$ ");
+
+	private static (string, IReadOnlyList<string>) ReadAndExtractCommandWithArguments()
+	{
+		string? inputLine = Console.ReadLine();
+		if (string.IsNullOrWhiteSpace(inputLine)) return (string.Empty, []);
 
 		var modifiedInputLine = inputLine.Trim();
-		var commandKeywordEndIndex = modifiedInputLine.IndexOf(' ', 0);
+		var firstSpace = modifiedInputLine.IndexOf(' ');
 
-		return commandKeywordEndIndex == -1
-				? (inputLine, [])
-				: (inputLine[..commandKeywordEndIndex], ExtractArguments(inputLine[(commandKeywordEndIndex + 1)..]));
-    }
+		return firstSpace < 0
+				? (modifiedInputLine, [])
+				: (modifiedInputLine[..firstSpace], ExtractArguments(modifiedInputLine[(firstSpace + 1)..]));
+	}
 
-	private static List<string> ExtractArguments(string argumentLine)
+	private static IReadOnlyList<string> ExtractArguments(string argumentLine)
 	{
 		argumentLine = argumentLine.Trim();
 
-		var args = new List<string>(argumentLine.Length / 2);
-		var processedArgumentBuilder = new StringBuilder(0, argumentLine.Length);
+		var args = new List<string>();
+		var processedArgumentBuilder = new StringBuilder(argumentLine.Length);
+
 		var isEscapeChar = false;
 		var inSingleQuote = false;
 		var inDoubleQuote = false;
-	
+
 		foreach (var token in argumentLine)
 		{
 			switch (token)
 			{
-				case SpecialCharacters.WHITESPACE:
+				case ' ':
 					if (isEscapeChar)
 					{
-						AppendToken(processedArgumentBuilder, token);
+						processedArgumentBuilder.Append(token);
 						isEscapeChar = false;
 					}
 					else if (inSingleQuote || inDoubleQuote)
 					{
-						AppendToken(processedArgumentBuilder, token);
+						processedArgumentBuilder.Append(token);
 					}
 					else
 					{
 						FlushArgument(processedArgumentBuilder, args);
 					}
 					break;
-				case SpecialCharacters.SINGLE_QUOTE:
+				case '\'':
 					if (inDoubleQuote)
 					{
-						AppendToken(processedArgumentBuilder, token);
+						processedArgumentBuilder.Append(token);
 					}
 					else if (!inSingleQuote && isEscapeChar)
 					{
-						AppendToken(processedArgumentBuilder, token);
+						processedArgumentBuilder.Append(token);
 						isEscapeChar = false;
 					}
 					else
@@ -115,10 +96,10 @@ public class Program
 					}
 
 					break;
-				case SpecialCharacters.DOUBLE_QUOTE:
+				case '\"':
 					if (inSingleQuote || isEscapeChar)
 					{
-						AppendToken(processedArgumentBuilder, token);
+						processedArgumentBuilder.Append(token);
 						isEscapeChar = false;
 					}
 					else
@@ -126,10 +107,10 @@ public class Program
 						inDoubleQuote = !inDoubleQuote;
 					}
 					break;
-				case SpecialCharacters.BACKSLASH:
+				case '\\':
 					if (inSingleQuote || (inDoubleQuote && isEscapeChar) || (!inSingleQuote && !inDoubleQuote && isEscapeChar))
 					{
-						AppendToken(processedArgumentBuilder, token);
+						processedArgumentBuilder.Append(token);
 						isEscapeChar = false;
 					}
 					else
@@ -138,7 +119,7 @@ public class Program
 					}
 					break;
 				default:
-					AppendToken(processedArgumentBuilder, token);
+					processedArgumentBuilder.Append(token);
 					isEscapeChar = false;
 					break;
 			}
@@ -146,7 +127,8 @@ public class Program
 
 		if (inSingleQuote || inDoubleQuote)
 		{
-			throw new Exception("Quotes not closed");
+			Console.WriteLine("unterminated quote");
+			return [];
 		}
 
 		// flush if anything's left
@@ -155,44 +137,17 @@ public class Program
 		return args;
 	}
 
-	private static void AppendToken(StringBuilder argumentBuilder, char token) => argumentBuilder.Append(token);
-
 	private static void FlushArgument(StringBuilder argumentBuilder, List<string> args)
 	{
-		if (argumentBuilder.Length == 0)
-		{
-			return;
-		}
+		if (argumentBuilder.Length == 0) return;
 
 		args.Add(argumentBuilder.ToString());
 		argumentBuilder.Clear();
 	}
 
-    private static void RunBuiltIn(string command, List<string> args)
+	private static void RunExecutable(string executable, IReadOnlyList<string> args)
 	{
-		switch (command)
-		{
-			case ECHO_COMMAND:	
-				EchoArguments(args);
-				break;
-			case TYPE_COMMAND:
-				PrintCommandType(args[0]);
-				break;
-			case PWD_COMMAND:
-				PrintCurrentDirectory();
-				break;
-			case CD_COMMAND:
-				ChangeDirectory(args[0]);
-				break;
-			default:
-				Console.WriteLine($"{command}: command not found");
-				break;
-		}
-	}
-
-	private static void RunExecutable(string executable, List<string> args)
-	{
-		if (!TryGetExecutablePath(executable, out string _))
+		if (!TryGetExecutablePath(executable, out string executablePath))
 		{
 			Console.WriteLine($"{executable}: not found");
 			return;
@@ -200,7 +155,7 @@ public class Program
 
 		var processStartInfo = new ProcessStartInfo
 		{
-			FileName = Path.GetFileName(executable),
+			FileName = executablePath,
 			UseShellExecute = false,
 		};
 
@@ -209,15 +164,22 @@ public class Program
 			processStartInfo.ArgumentList.Add(arg);
 		}
 
-        using var process = Process.Start(processStartInfo);
+		using var process = Process.Start(processStartInfo);
 		process?.WaitForExit();
-    }
+	}
 
-    private static void EchoArguments(List<string> args) => Console.WriteLine(string.Join(" ", args));
+	private static void EchoArguments(IReadOnlyList<string> args) => Console.WriteLine(string.Join(" ", args));
 
-    private static void PrintCommandType(string command)
+	private static void PrintCommandType(IReadOnlyList<string> args)
 	{
-		if (IsBuiltInCommand(command))
+		if (args.Count == 0)
+		{
+			Console.WriteLine("type: missing operand");
+			return;
+		}
+
+		var command = args[0];
+		if (BuiltInCommands.ContainsKey(command))
 		{
 			Console.WriteLine($"{command} is a shell builtin");
 			return;
@@ -232,44 +194,63 @@ public class Program
 		Console.WriteLine($"{command}: not found");
 	}
 
-	private static void PrintCurrentDirectory() => Console.WriteLine(Directory.GetCurrentDirectory());
+	private static void PrintCurrentDirectory(IReadOnlyList<string> _) => Console.WriteLine(Directory.GetCurrentDirectory());
 
-	private static void ChangeDirectory(string argString)
+	private static void ChangeDirectory(IReadOnlyList<string> args)
 	{
-		var path = argString;
-		if (path.StartsWith("~", StringComparison.OrdinalIgnoreCase))
+		if (args.Count == 0)
 		{
-			var homeDirectoryPath = Environment.GetEnvironmentVariable("HOME");
-			if (string.IsNullOrEmpty(homeDirectoryPath))
+			Console.WriteLine("cd: missing operand");
+			return;
+		}
+
+		var path = args[0];
+
+		if (path == "~" || path.StartsWith("~/", StringComparison.Ordinal))
+		{
+			var homeDirectory = Environment.GetEnvironmentVariable("HOME");
+
+			if (string.IsNullOrEmpty(homeDirectory))
 			{
-				throw new Exception("Home directory not found!");
+				Console.WriteLine("cd: HOME not set");
+				return;
 			}
 
-			path = path.Equals("~", StringComparison.OrdinalIgnoreCase) ? homeDirectoryPath : Path.Combine(homeDirectoryPath, argString[2..]);
-			Directory.SetCurrentDirectory(path);
-
-			return;
+			path = path == "~"
+				? homeDirectory
+				: Path.Combine(homeDirectory, path[2..]);
 		}
 
 		if (!Path.IsPathFullyQualified(path))
 		{
-			path = Path.Combine(Directory.GetCurrentDirectory(), argString);
+			path = Path.Combine(Directory.GetCurrentDirectory(), path);
 		}
 
 		if (!Directory.Exists(path))
 		{
-			Console.WriteLine($"{CD_COMMAND}: {path}: No such file or directory");
+			Console.WriteLine($"cd: {path}: No such file or directory");
 			return;
 		}
 
 		Directory.SetCurrentDirectory(path);
 	}
 
-	private static bool IsBuiltInCommand(string command) => BuiltInCommands.Contains(command);
+	private static void Exit(IReadOnlyList<string> _) => Environment.Exit(0);
 
 	private static bool TryGetExecutablePath(string fileName, out string containingExecutablePath)
 	{
 		containingExecutablePath = string.Empty;
+
+		if (Path.IsPathFullyQualified(fileName) || fileName.Contains(Path.DirectorySeparatorChar))
+		{
+			if (File.Exists(fileName) && CheckFileExecutableFlag(fileName))
+			{
+				containingExecutablePath = Path.GetFullPath(fileName);
+				return true;
+			}
+
+			return false;
+		}
 
 		var pathVariableValue = Environment.GetEnvironmentVariable("PATH");
 		if (string.IsNullOrEmpty(pathVariableValue))
@@ -278,15 +259,11 @@ public class Program
 		}
 
 		var executablePaths = pathVariableValue.Split(Path.PathSeparator);
-		foreach (var executablePath in executablePaths)
+		foreach (var dir in executablePaths)
 		{
-			var filePath = Path.Combine(executablePath, fileName);
-			if (!File.Exists(filePath))
-			{
-				continue;
-			}
-
-			if (CheckFileExecutableFlag(filePath))
+			var filePath = Path.Combine(dir, fileName);
+			if (File.Exists(filePath)
+			   && CheckFileExecutableFlag(filePath))
 			{
 				containingExecutablePath = filePath;
 				return true;
@@ -305,7 +282,7 @@ public class Program
 
 		var fileMode = File.GetUnixFileMode(filePath);
 		var executeMask = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
-			
+
 		return (fileMode & executeMask) != 0;
 	}
 }
