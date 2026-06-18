@@ -127,7 +127,7 @@ public class Program
 					}
 					break;
 				case SpecialCharacters.BACKSLASH:
-					if (inSingleQuote || (inDoubleQuote && isEscapeChar))
+					if (inSingleQuote || (inDoubleQuote && isEscapeChar) || (!inSingleQuote && !inDoubleQuote && isEscapeChar))
 					{
 						AppendToken(processedArgumentBuilder, token);
 						isEscapeChar = false;
@@ -139,6 +139,7 @@ public class Program
 					break;
 				default:
 					AppendToken(processedArgumentBuilder, token);
+					isEscapeChar = false;
 					break;
 			}
 		}
