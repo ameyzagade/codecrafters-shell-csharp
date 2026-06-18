@@ -109,7 +109,7 @@ public class Program
 					}
 					break;
 				case BACKSLASH:
-					if (inSingleQuote)
+					if (inSingleQuote || previousChar.Equals(BACKSLASH))
 					{
 						AppendToken(processedArgumentBuilder, token);
 					}
