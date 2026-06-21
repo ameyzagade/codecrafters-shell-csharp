@@ -58,11 +58,11 @@ public class ShellTokeniser
 		{
 			FlushToken();
 		}
-		else if (c == '\'' && _state != State.DoubleQuoted)
+		else if (c == '\'')
 		{
 			_state = State.SingleQuoted;		
 		}
-		else if (c == '\"' && _state != State.SingleQuoted)
+		else if (c == '\"')
 		{
 			_state = State.DoubleQuoted;
 		}
