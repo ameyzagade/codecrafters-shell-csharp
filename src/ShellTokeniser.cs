@@ -1,4 +1,3 @@
-using System.ComponentModel.Design;
 using System.Text;
 
 public class ShellTokeniser
@@ -9,6 +8,8 @@ public class ShellTokeniser
 		SingleQuoted,
 		DoubleQuoted,
 	}
+
+	public sealed record ParsedCommand(string Command, IReadOnlyList<string> Arguments);
 
 	private readonly string _input;
 	private readonly List<string> _tokens = [];
@@ -29,7 +30,7 @@ public class ShellTokeniser
 		FlushToken();
 		ValidateEndState();
 
-		var command = _tokens[0];
+		var command = _tokens.Count == 0 ? string.Empty : _tokens[0];
 		var args = _tokens.Count > 1 ? _tokens[1..] : [];
 
 		return new ParsedCommand(command, args);
