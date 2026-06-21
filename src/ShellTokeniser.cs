@@ -27,12 +27,6 @@ public class ShellTokeniser
 		}
 
 		FlushToken();
-
-		foreach (var item in _tokens)
-		{
-			Console.WriteLine(item);
-		}
-
 		return _tokens;
 	}
 
