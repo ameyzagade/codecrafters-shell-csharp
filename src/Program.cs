@@ -43,14 +43,14 @@ public class Program
 		if (string.IsNullOrWhiteSpace(inputLine)) return (string.Empty, []);
 
 		var modifiedInputLine = inputLine.Trim();
-		var firstSpace = modifiedInputLine.IndexOf(' ');
+		var tokens = ExtractTokens(modifiedInputLine);
 
-		return firstSpace < 0
-				? (modifiedInputLine, [])
-				: (modifiedInputLine[..firstSpace], ExtractArguments(modifiedInputLine[(firstSpace + 1)..]));
+		var command = tokens[0];
+		var args = tokens.Count > 1 ? tokens[1..] : [];
+		return (command, args);
 	}
 
-	private static IReadOnlyList<string> ExtractArguments(string argumentLine)
+	private static List<string> ExtractTokens(string argumentLine)
 	{
 		argumentLine = argumentLine.Trim();
 
