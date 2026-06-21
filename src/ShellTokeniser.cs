@@ -53,6 +53,13 @@ public class ShellTokeniser
 
 	private void ProcessNormal(char c)
 	{
+		if (_escapeNextCharacter)
+		{
+			_escapeNextCharacter = false;
+			_current.Append(c);
+			return;
+		}
+
 		switch (c)
 		{
 			case ' ':
@@ -68,7 +75,6 @@ public class ShellTokeniser
 				_escapeNextCharacter = true;
 				break;
 			default:
-				if (_escapeNextCharacter) _escapeNextCharacter = false;
 				_current.Append(c);
 				break;
 		}
@@ -104,17 +110,17 @@ public class ShellTokeniser
 			return;
 		}
 
-		if (c == '\"')
+		switch (c)
 		{
-			_state = State.Normal;
-		}
-		else if (c == '\\')
-		{
-			_escapeNextCharacter = true;
-		}
-		else
-		{
-			_current.Append(c);
+			case '\"':
+				_state = State.Normal;
+				break;
+			case '\\':
+				_escapeNextCharacter = true;
+				break;
+			default:
+				_current.Append(c);
+				break;
 		}
 	}
 
