@@ -43,111 +43,17 @@ public class Program
 		if (string.IsNullOrWhiteSpace(inputLine)) return (string.Empty, []);
 
 		var modifiedInputLine = inputLine.Trim();
-		var tokens = ExtractTokens(modifiedInputLine);
+		var tokens = new ShellTokeniser(modifiedInputLine).Parse();
 
 		var command = tokens[0];
 		var args = tokens.Count > 1 ? tokens[1..] : [];
+		
 		return (command, args);
-	}
-
-	private static List<string> ExtractTokens(string argumentLine)
-	{
-		argumentLine = argumentLine.Trim();
-
-		var args = new List<string>();
-		var processedArgumentBuilder = new StringBuilder(argumentLine.Length);
-
-		var isEscapeChar = false;
-		var inSingleQuote = false;
-		var inDoubleQuote = false;
-
-		foreach (var token in argumentLine)
-		{
-			switch (token)
-			{
-				case ' ':
-					if (isEscapeChar)
-					{
-						processedArgumentBuilder.Append(token);
-						isEscapeChar = false;
-					}
-					else if (inSingleQuote || inDoubleQuote)
-					{
-						processedArgumentBuilder.Append(token);
-					}
-					else
-					{
-						FlushArgument(processedArgumentBuilder, args);
-					}
-					break;
-				case '\'':
-					if (inDoubleQuote)
-					{
-						processedArgumentBuilder.Append(token);
-					}
-					else if (!inSingleQuote && isEscapeChar)
-					{
-						processedArgumentBuilder.Append(token);
-						isEscapeChar = false;
-					}
-					else
-					{
-						inSingleQuote = !inSingleQuote;
-					}
-
-					break;
-				case '\"':
-					if (inSingleQuote || isEscapeChar)
-					{
-						processedArgumentBuilder.Append(token);
-						isEscapeChar = false;
-					}
-					else
-					{
-						inDoubleQuote = !inDoubleQuote;
-					}
-					break;
-				case '\\':
-					if (inSingleQuote || (inDoubleQuote && isEscapeChar) || (!inSingleQuote && !inDoubleQuote && isEscapeChar))
-					{
-						processedArgumentBuilder.Append(token);
-						isEscapeChar = false;
-					}
-					else
-					{
-						isEscapeChar = !isEscapeChar;
-					}
-					break;
-				default:
-					processedArgumentBuilder.Append(token);
-					isEscapeChar = false;
-					break;
-			}
-		}
-
-		if (inSingleQuote || inDoubleQuote)
-		{
-			Console.WriteLine("unterminated quote");
-			return [];
-		}
-
-		// flush if anything's left
-		FlushArgument(processedArgumentBuilder, args);
-
-		return args;
-	}
-
-	private static void FlushArgument(StringBuilder argumentBuilder, List<string> args)
-	{
-		if (argumentBuilder.Length == 0) return;
-
-		args.Add(argumentBuilder.ToString());
-		argumentBuilder.Clear();
 	}
 
 	private static void RunExecutable(string executable, IReadOnlyList<string> args)
 	{
-		if (!TryGetExecutablePath(executable, out string executablePath))
+		if (!TryGetExecutablePath(executable, out string _))
 		{
 			Console.WriteLine($"{executable}: not found");
 			return;
@@ -194,7 +100,7 @@ public class Program
 		Console.WriteLine($"{command}: not found");
 	}
 
-	private static void PrintCurrentDirectory(IReadOnlyList<string> _) => Console.WriteLine(Directory.GetCurrentDirectory());
+	private static void PrintCurrentDirectory(IReadOnlyList<string> args) => Console.WriteLine(Directory.GetCurrentDirectory());
 
 	private static void ChangeDirectory(IReadOnlyList<string> args)
 	{
@@ -235,7 +141,7 @@ public class Program
 		Directory.SetCurrentDirectory(path);
 	}
 
-	private static void Exit(IReadOnlyList<string> _) => Environment.Exit(0);
+	private static void Exit(IReadOnlyList<string> args) => Environment.Exit(0);
 
 	private static bool TryGetExecutablePath(string fileName, out string containingExecutablePath)
 	{
