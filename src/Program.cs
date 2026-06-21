@@ -43,12 +43,9 @@ public class Program
 		if (string.IsNullOrWhiteSpace(inputLine)) return (string.Empty, []);
 
 		var modifiedInputLine = inputLine.Trim();
-		var tokens = new ShellTokeniser(modifiedInputLine).Parse();
+		var parsedCommand = new ShellTokeniser(modifiedInputLine).Parse();
 
-		var command = tokens[0];
-		var args = tokens.Count > 1 ? tokens[1..] : [];
-		
-		return (command, args);
+		return (parsedCommand.Command, parsedCommand.Arguments);
 	}
 
 	private static void RunExecutable(string executable, IReadOnlyList<string> args)

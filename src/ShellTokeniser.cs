@@ -1,3 +1,4 @@
+using System.ComponentModel.Design;
 using System.Text;
 
 public class ShellTokeniser
@@ -7,8 +8,6 @@ public class ShellTokeniser
 		Normal,
 		SingleQuoted,
 		DoubleQuoted,
-		Escaped,
-		DoubleQuotedEscaped
 	}
 
 	private readonly string _input;
@@ -16,10 +15,11 @@ public class ShellTokeniser
 	private readonly StringBuilder _current = new();
 
 	private State _state = State.Normal;
+	private bool _escapeNextCharacter = false;
 
-    public ShellTokeniser(string input) => _input = input;
+	public ShellTokeniser(string input) => _input = input;
 
-    public List<string> Parse()
+	public ParsedCommand Parse()
 	{
 		foreach (var c in _input)
 		{
@@ -27,7 +27,12 @@ public class ShellTokeniser
 		}
 
 		FlushToken();
-		return _tokens;
+		ValidateEndState();
+
+		var command = _tokens[0];
+		var args = _tokens.Count > 1 ? _tokens[1..] : [];
+
+		return new ParsedCommand(command, args);
 	}
 
 	private void Process(char c)
@@ -43,40 +48,33 @@ public class ShellTokeniser
 			case State.DoubleQuoted:
 				ProcessDoubleQuoted(c);
 				break;
-			case State.Escaped:
-				ProcessEscaped(c);
+		}
+	}
+
+	private void ProcessNormal(char c)
+	{
+		switch (c)
+		{
+			case ' ':
+				FlushToken();
 				break;
-			case State.DoubleQuotedEscaped:
-				ProcessDoubleQuotedEscaped(c);
+			case '\'':
+				_state = State.SingleQuoted;
+				break;
+			case '\"':
+				_state = State.DoubleQuoted;
+				break;
+			case '\\':
+				_escapeNextCharacter = true;
+				break;
+			default:
+				if (_escapeNextCharacter) _escapeNextCharacter = false;
+				_current.Append(c);
 				break;
 		}
 	}
 
-    private void ProcessNormal(char c)
-    {
-		if (c == ' ')
-		{
-			FlushToken();
-		}
-		else if (c == '\'')
-		{
-			_state = State.SingleQuoted;		
-		}
-		else if (c == '\"')
-		{
-			_state = State.DoubleQuoted;
-		}
-		else if (c == '\\')
-		{
-			_state = State.Escaped;
-		}
-		else
-		{
-    	    _current.Append(c);
-		}
-    }
-
-    private void ProcessSingleQuoted(char c)
+	private void ProcessSingleQuoted(char c)
 	{
 		if (c == '\'')
 		{
@@ -84,19 +82,35 @@ public class ShellTokeniser
 		}
 		else
 		{
-    		_current.Append(c);
+			_current.Append(c);
 		}
 	}
 
 	private void ProcessDoubleQuoted(char c)
 	{
+		if (_escapeNextCharacter)
+		{
+			if (c is '"' or '\\' or '$' or '`' or '\n')
+			{
+				_current.Append(c);
+			}
+			else
+			{
+				_current.Append('\\');
+				_current.Append(c);
+			}
+
+			_escapeNextCharacter = false;
+			return;
+		}
+
 		if (c == '\"')
 		{
 			_state = State.Normal;
 		}
 		else if (c == '\\')
 		{
-			_state = State.DoubleQuotedEscaped;
+			_escapeNextCharacter = true;
 		}
 		else
 		{
@@ -104,24 +118,7 @@ public class ShellTokeniser
 		}
 	}
 
-	private void ProcessEscaped(char c)
-	{
-		_current.Append(c);
-		_state = State.Normal;		
-	}
-
-	private void ProcessDoubleQuotedEscaped(char c)
-    {
-        if (c != '\"' && c != '\\' && c != '$' && c != '`' && c != '\n')
-        {
-			_current.Append('\\');
-        }
-
-        _current.Append(c);
-		_state = State.DoubleQuoted;
-    }
-
-    private void FlushToken()
+	private void FlushToken()
 	{
 		if (_current.Length < 1)
 		{
@@ -130,5 +127,13 @@ public class ShellTokeniser
 
 		_tokens.Add(_current.ToString());
 		_current.Clear();
+	}
+
+	private void ValidateEndState()
+	{
+		if (_state is State.SingleQuoted or State.DoubleQuoted)
+		{
+			throw new InvalidOperationException("unterminated quote");
+		}
 	}
 }
