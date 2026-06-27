@@ -71,7 +71,30 @@ public class Program
 		process?.WaitForExit();
 	}
 
-	private static void EchoArguments(IReadOnlyList<string> args) => Console.WriteLine(string.Join(" ", args));
+	private static void EchoArguments(IReadOnlyList<string> args)
+	{
+		if (args.Count == 0)
+		{
+			return;
+		}
+
+		var redirectIndex = GetRedirectIndex(args);
+		if (redirectIndex == -1)
+		{
+			Console.WriteLine(string.Join(" ", args));
+			return;
+		}
+
+		if (redirectIndex == args.Count - 1)
+		{
+			Console.WriteLine("echo: missing file operand");
+		}
+
+		var inputContent = string.Join(" ", args.Take(redirectIndex));
+		var fileName = args[redirectIndex + 1];
+
+		File.WriteAllText(Path.GetFullPath(fileName), inputContent);
+	}
 
 	private static void PrintCommandType(IReadOnlyList<string> args)
 	{
@@ -187,5 +210,21 @@ public class Program
 		var executeMask = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
 
 		return (fileMode & executeMask) != 0;
+	}
+
+	private static int GetRedirectIndex(IReadOnlyList<string> args)
+	{
+		const string StandardOutput = ">";
+		const string StandardOutput1 = ">1";
+
+		for (int position = 0; position < args.Count; position++)
+		{
+            if (args[position] is StandardOutput or StandardOutput1)
+			{
+				return position;
+			}
+		}
+
+		return -1;
 	}
 }
