@@ -180,7 +180,11 @@ public sealed class ShellLexer : IShellLexer
 	}
 
 	private char GetNextLexeme(LexerContext context)
-		=> context.CurrentInputBufferIndex > context.InputBuffer.Length - 1 ? context.InputBuffer[^1] : context.InputBuffer[context.CurrentInputBufferIndex + 1];
+	{
+		var inputBufferLength = context.InputBuffer.Length - 1;
+		var nextLexemeIndex = context.CurrentInputBufferIndex + 1;
+		return nextLexemeIndex > inputBufferLength ? context.InputBuffer[^1] : context.InputBuffer[nextLexemeIndex];
+	}
 
 	private void ValidateEndState(LexerContext context)
 	{
