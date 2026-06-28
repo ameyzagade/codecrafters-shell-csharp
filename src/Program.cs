@@ -93,11 +93,6 @@ public class Program
 
 	private static void RouteStandardOutput(ShellCommand command, ShellExecutionContext context)
 	{
-		if (string.IsNullOrEmpty(context.StandardOutput))
-		{
-			return;
-		}
-
 		if (command.Redirect.Type == RedirectType.StdOut)
 		{
 			File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardOutput);
@@ -110,11 +105,6 @@ public class Program
 
 	private static void RouteStandardError(ShellCommand command, ShellExecutionContext context)
 	{
-		if (string.IsNullOrEmpty(context.StandardError))
-		{
-			return;
-		}
-
 		if (command.Redirect.Type == RedirectType.StdErr)
 		{
 			File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardError);
