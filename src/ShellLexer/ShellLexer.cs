@@ -76,7 +76,7 @@ public sealed class ShellLexer : IShellLexer
 		switch (c)
 		{
 			case '>':
-				EmitOperator(context, TokenType.RedirectOut, ">");
+				EmitOperator(context, TokenType.RedirectStdOut, ">");
 				break;
 			case '\'':
 				context.TokenStarted = true;
@@ -93,7 +93,9 @@ public sealed class ShellLexer : IShellLexer
 				var nextCharacter = PeekNextCharacter(context.InputBuffer, context.CurrentInputBufferIndex);
 				if (nextCharacter != null && nextCharacter == '>')
 				{
-					EmitOperator(context, TokenType.RedirectOut, $"{c}>");
+					var tokenType = c == '1' ? TokenType.RedirectStdOut : TokenType.RedirectStdErr;
+					EmitOperator(context, tokenType, $"{c}>");
+
 					context.CurrentInputBufferIndex++; // Skip reading >
 				}
 				else

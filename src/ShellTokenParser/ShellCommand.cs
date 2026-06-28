@@ -4,8 +4,7 @@ public class ShellCommand
 
     public string Command { get; set; }
     public IReadOnlyList<string> Arguments => _arguments;
-    public bool OutputRedirection { get; set; }
-    public string OutputRedirectionFilePath { get; set; }
+    public Redirect Redirect { get; set; } = new Redirect(RedirectType.None, string.Empty);
 
     public void AddArgument(string argument) => _arguments.Add(argument);
 }

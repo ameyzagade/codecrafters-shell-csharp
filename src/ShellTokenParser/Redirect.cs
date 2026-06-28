@@ -1,0 +1,1 @@
+public record Redirect(RedirectType Type, string Target);

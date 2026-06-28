@@ -11,6 +11,9 @@ public sealed class ShellTokenParser : ITokenParser
     {
         public ShellCommand Command { get; } = new();
         public ParserState State { get; set; }
+        public IReadOnlyList<Token> TokenStream { get; init; }
+        public TokenType PendingRedirectType { get; set; }
+        public int CurrentTokenStreamIndex { get; set; }
     }
 
     public ShellCommand Parse(IReadOnlyList<Token> tokens)
@@ -18,6 +21,7 @@ public sealed class ShellTokenParser : ITokenParser
         var context = new ParserContext
         {
             State = ParserState.ExpectCommand,
+            TokenStream = tokens,
         };
 
         if (tokens.Count == 0)
@@ -26,9 +30,9 @@ public sealed class ShellTokenParser : ITokenParser
             return context.Command;
         }
 
-        foreach (var token in tokens)
+        for (context.CurrentTokenStreamIndex = 0; context.CurrentTokenStreamIndex < tokens.Count; context.CurrentTokenStreamIndex++)
         {
-            ProcessToken(context, token);
+            ProcessToken(context, tokens[context.CurrentTokenStreamIndex]);
         }
 
         ValidateEndState(context);
@@ -74,8 +78,9 @@ public sealed class ShellTokenParser : ITokenParser
             return;
         }
 
-        if (token.Type is TokenType.RedirectOut)
+        if (token.Type is TokenType.RedirectStdOut or TokenType.RedirectStdErr)
         {
+            context.PendingRedirectType = token.Type;
             context.State = ParserState.ExpectRedirectionTarget;
 
             return;
@@ -91,8 +96,8 @@ public sealed class ShellTokenParser : ITokenParser
             throw new Exception($"Word expected after redirect operator, got type {Enum.GetName(token.Type)} with value: {token.Value}");
         }
 
-        context.Command.OutputRedirection = true;
-        context.Command.OutputRedirectionFilePath = token.Value;
+        var redirectType = context.PendingRedirectType == TokenType.RedirectStdOut ? RedirectType.StdOut : RedirectType.StdErr;
+        context.Command.Redirect = new(redirectType, token.Value);
 
         context.State = ParserState.ExpectArgumentOrRedirect;
     }

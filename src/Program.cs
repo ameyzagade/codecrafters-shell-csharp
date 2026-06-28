@@ -26,7 +26,7 @@ public class Program
 
 			var context = ExecuteCommand(command);
 			RouteStandardOutput(command, context);
-			RouteStandardError(context);
+			RouteStandardError(command, context);
 		}
 	}
 
@@ -85,9 +85,14 @@ public class Program
 
 	private static void RouteStandardOutput(ShellCommand command, ShellExecutionContext context)
 	{
-		if (command.OutputRedirection)
+		if (string.IsNullOrEmpty(context.StandardOutput))
 		{
-			File.WriteAllText(Path.GetFullPath(command.OutputRedirectionFilePath), context.StandardOutput);
+			return;
+		}
+
+		if (command.Redirect.Type == RedirectType.StdOut)
+		{
+			File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardOutput);
 		}
 		else
 		{
@@ -95,9 +100,18 @@ public class Program
 		}
 	}
 
-	private static void RouteStandardError(ShellExecutionContext context)
+	private static void RouteStandardError(ShellCommand command, ShellExecutionContext context)
 	{
-		if (!string.IsNullOrEmpty(context.StandardError))
+		if (string.IsNullOrEmpty(context.StandardError))
+		{
+			return;
+		}
+
+		if (command.Redirect.Type == RedirectType.StdErr)
+		{
+			File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardError);
+		}
+		else
 		{
 			Console.Error.Write(context.StandardError);
 		}

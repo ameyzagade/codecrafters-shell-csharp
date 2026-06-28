@@ -1,5 +1,6 @@
 public enum TokenType
 {
     Word,
-    RedirectOut
+    RedirectStdOut,
+    RedirectStdErr,
 }
