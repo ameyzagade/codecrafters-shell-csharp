@@ -16,19 +16,25 @@ public sealed class ShellLexer : IShellLexer
 		public LexerState State { get; set; }
 		public bool EscapeNextCharacter { get; set; }
 		public bool TokenStarted { get; set; }
+		public string InputBuffer { get; init; }
+		public int CurrentInputBufferIndex { get; set; } = 0;
 	}
 
 	public IReadOnlyList<Token> Tokenize(string input)
 	{
-		var context = new LexerContext();
 		if (string.IsNullOrWhiteSpace(input))
 		{
 			return [];
 		}
 
-		foreach (var c in input)
+		var context = new LexerContext()
 		{
-			Process(context, c);
+			InputBuffer = input
+		};
+
+		for (context.CurrentInputBufferIndex = 0; context.CurrentInputBufferIndex < input.Length; context.CurrentInputBufferIndex++)
+		{
+			Process(context, input[context.CurrentInputBufferIndex]);
 		}
 
 		FlushToken(context);
@@ -57,7 +63,7 @@ public sealed class ShellLexer : IShellLexer
 	{
 		if (context.EscapeNextCharacter)
 		{
-			HandleEscapeCharacter(context, c);
+			ConsumeEscapedCharacter(context, c);
 			return;
 		}
 
@@ -82,6 +88,13 @@ public sealed class ShellLexer : IShellLexer
 				break;
 			case '\\':
 				context.EscapeNextCharacter = true;
+				break;
+			case '1' or '2':
+				if (GetNextLexeme(context) == '>')
+				{
+					EmitOperator(context, TokenType.RedirectOut, $"{c}>");
+					context.CurrentInputBufferIndex++; // Skip reading >
+				}
 				break;
 			default:
 				context.TokenStarted = true;
@@ -134,7 +147,7 @@ public sealed class ShellLexer : IShellLexer
 		}
 	}
 
-	private void HandleEscapeCharacter(LexerContext context, char c)
+	private void ConsumeEscapedCharacter(LexerContext context, char c)
 	{
 		context.EscapeNextCharacter = false;
 		context.TokenStarted = true;
@@ -160,6 +173,9 @@ public sealed class ShellLexer : IShellLexer
 		FlushToken(context);
 		context.Tokens.Add(new Token(type, value));
 	}
+
+	private char GetNextLexeme(LexerContext context)
+		=> context.CurrentInputBufferIndex > context.InputBuffer.Length - 1 ? context.InputBuffer[^1] : context.InputBuffer[context.CurrentInputBufferIndex];
 
 	private void ValidateEndState(LexerContext context)
 	{

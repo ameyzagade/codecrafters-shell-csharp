@@ -24,8 +24,7 @@ public class Program
 				continue;
 			}
 
-			ShellExecutionContext context = ExecuteCommand(command);
-
+			var context = ExecuteCommand(command);
 			RouteStandardOutput(command, context);
 			RouteStandardError(context);
 		}
