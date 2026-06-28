@@ -24,6 +24,14 @@ public class Program
 				continue;
 			}
 
+			// Console.WriteLine(command.Command);
+			// foreach (var item in command.Arguments)
+			// {
+			// 	Console.WriteLine(item);
+			// }
+			// Console.WriteLine($"{command.Redirect.Type} - {command.Redirect.Target}");
+			// return;
+
 			var context = ExecuteCommand(command);
 			RouteStandardOutput(command, context);
 			RouteStandardError(command, context);
