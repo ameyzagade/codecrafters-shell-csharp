@@ -118,7 +118,6 @@ public class Program
 		if (command.Redirect.Type == RedirectType.StdErr)
 		{
 			File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardError);
-			Console.WriteLine(File.Exists(command.Redirect.Target));
 		}
 		else
 		{
