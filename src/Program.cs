@@ -1,9 +1,10 @@
 using System.Diagnostics;
-using System.Text;
 
 public class Program
 {
-	private static readonly Dictionary<string, Action<IReadOnlyList<string>>> BuiltInCommands = new(StringComparer.OrdinalIgnoreCase)
+	private sealed record ShellExecutionContext(string StandardOutput, string StandardError);
+
+	private static readonly Dictionary<string, Func<IReadOnlyList<string>, ShellExecutionContext>> BuiltInCommands = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["echo"] = EchoArguments,
 		["type"] = PrintCommandType,
@@ -17,49 +18,56 @@ public class Program
 		while (true)
 		{
 			PromptUser();
-
-			var (command, args) = ReadAndExtractCommandWithArguments();
-			if (command.Length == 0)
+			var command = ReadInputAndExtractCommand();
+			if (string.IsNullOrEmpty(command.Command))
 			{
 				continue;
 			}
 
-			if (BuiltInCommands.TryGetValue(command, out var action))
-			{
-				action(args);
-			}
-			else
-			{
-				RunExecutable(command, args);
-			}
+			ShellExecutionContext context = ExecuteCommand(command);
+
+			RouteStandardOutput(command, context);
+			RouteStandardError(context);
 		}
 	}
 
 	private static void PromptUser() => Console.Write("$ ");
 
-	private static (string, IReadOnlyList<string>) ReadAndExtractCommandWithArguments()
+	private static ShellCommand ReadInputAndExtractCommand()
 	{
 		string? inputLine = Console.ReadLine();
-		if (string.IsNullOrWhiteSpace(inputLine)) return (string.Empty, []);
+		if (string.IsNullOrWhiteSpace(inputLine))
+		{
+			return new ShellCommand()
+			{
+				Command = "",
+			};
+		}
 
 		var modifiedInputLine = inputLine.Trim();
-		var parsedCommand = new ShellTokeniser(modifiedInputLine).Parse();
+		var inputTokenStream = new ShellLexer().Tokenize(modifiedInputLine);
 
-		return (parsedCommand.Command, parsedCommand.Arguments);
+		return new ShellTokenParser().Parse(inputTokenStream);
 	}
 
-	private static void RunExecutable(string executable, IReadOnlyList<string> args)
+	private static ShellExecutionContext ExecuteCommand(ShellCommand command)
+			=> BuiltInCommands.TryGetValue(command.Command, out var action)
+				? action(command.Arguments)
+				: RunExecutable(command.Command, command.Arguments);
+
+	private static ShellExecutionContext RunExecutable(string executable, IReadOnlyList<string> args)
 	{
 		if (!TryGetExecutablePath(executable, out string _))
 		{
-			Console.WriteLine($"{executable}: not found");
-			return;
+			return new ShellExecutionContext(string.Empty, $"{executable}: not found{Environment.NewLine}");
 		}
 
 		var processStartInfo = new ProcessStartInfo
 		{
 			FileName = Path.GetFileName(executable),
 			UseShellExecute = false,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
 		};
 
 		foreach (var arg in args)
@@ -67,67 +75,65 @@ public class Program
 			processStartInfo.ArgumentList.Add(arg);
 		}
 
+		ShellExecutionContext context;
+
 		using var process = Process.Start(processStartInfo);
+		context = new(process!.StandardOutput.ReadToEnd(), process!.StandardError.ReadToEnd());
 		process?.WaitForExit();
+
+		return context;
 	}
 
-	private static void EchoArguments(IReadOnlyList<string> args)
+	private static void RouteStandardOutput(ShellCommand command, ShellExecutionContext context)
+	{
+		if (command.OutputRedirection)
+		{
+			File.WriteAllText(Path.GetFullPath(command.OutputRedirectionFilePath), context.StandardOutput);
+		}
+		else
+		{
+			Console.Write(context.StandardOutput);
+		}
+	}
+
+	private static void RouteStandardError(ShellExecutionContext context)
+	{
+		if (!string.IsNullOrEmpty(context.StandardError))
+		{
+			Console.Error.Write(context.StandardError);
+		}
+	}
+
+	private static ShellExecutionContext EchoArguments(IReadOnlyList<string> args) => new(string.Join(" ", args) + Environment.NewLine, string.Empty);
+
+	private static ShellExecutionContext PrintCommandType(IReadOnlyList<string> args)
 	{
 		if (args.Count == 0)
 		{
-			return;
-		}
-
-		var redirectIndex = GetRedirectIndex(args);
-		if (redirectIndex == -1)
-		{
-			Console.WriteLine(string.Join(" ", args));
-			return;
-		}
-
-		if (redirectIndex == args.Count - 1)
-		{
-			Console.WriteLine("echo: missing file operand");
-		}
-
-		var inputContent = string.Join(" ", args.Take(redirectIndex));
-		var fileName = args[redirectIndex + 1];
-
-		File.WriteAllText(Path.GetFullPath(fileName), inputContent);
-	}
-
-	private static void PrintCommandType(IReadOnlyList<string> args)
-	{
-		if (args.Count == 0)
-		{
-			Console.WriteLine("type: missing operand");
-			return;
+			return new ShellExecutionContext(string.Empty, $"type: missing operand{Environment.NewLine}");
 		}
 
 		var command = args[0];
 		if (BuiltInCommands.ContainsKey(command))
 		{
-			Console.WriteLine($"{command} is a shell builtin");
-			return;
+			return new ShellExecutionContext($"{command} is a shell builtin{Environment.NewLine}", string.Empty);
 		}
 
 		if (TryGetExecutablePath(command, out string executablePath))
 		{
-			Console.WriteLine($"{command} is {executablePath}");
-			return;
+			return new ShellExecutionContext($"{command} is {executablePath}{Environment.NewLine}", string.Empty);
 		}
 
-		Console.WriteLine($"{command}: not found");
+		return new ShellExecutionContext(string.Empty, $"{command}: not found{Environment.NewLine}");
 	}
 
-	private static void PrintCurrentDirectory(IReadOnlyList<string> args) => Console.WriteLine(Directory.GetCurrentDirectory());
+	private static ShellExecutionContext PrintCurrentDirectory(IReadOnlyList<string> args) => new(Directory.GetCurrentDirectory() + Environment.NewLine, string.Empty);
 
-	private static void ChangeDirectory(IReadOnlyList<string> args)
+	private static ShellExecutionContext ChangeDirectory(IReadOnlyList<string> args)
 	{
 		if (args.Count == 0)
 		{
-			Console.WriteLine("cd: missing operand");
-			return;
+			return new ShellExecutionContext(string.Empty, $"cd: missing operand{Environment.NewLine}");
 		}
 
 		var path = args[0];
@@ -138,8 +144,7 @@ public class Program
 
 			if (string.IsNullOrEmpty(homeDirectory))
 			{
-				Console.WriteLine("cd: HOME not set");
-				return;
+				return new ShellExecutionContext(string.Empty, $"cd: HOME not set{Environment.NewLine}");
 			}
 
 			path = path == "~"
@@ -154,14 +159,18 @@ public class Program
 
 		if (!Directory.Exists(path))
 		{
-			Console.WriteLine($"cd: {path}: No such file or directory");
-			return;
+			return new ShellExecutionContext(string.Empty, $"cd: {path}: No such file or directory{Environment.NewLine}");
 		}
 
 		Directory.SetCurrentDirectory(path);
+		return new ShellExecutionContext(string.Empty, string.Empty);
 	}
 
-	private static void Exit(IReadOnlyList<string> args) => Environment.Exit(0);
+	private static ShellExecutionContext Exit(IReadOnlyList<string> args)
+	{
+		Environment.Exit(0);
+		return new ShellExecutionContext(string.Empty, string.Empty);
+	}
 
 	private static bool TryGetExecutablePath(string fileName, out string containingExecutablePath)
 	{
@@ -188,8 +197,7 @@ public class Program
 		foreach (var dir in executablePaths)
 		{
 			var filePath = Path.Combine(dir, fileName);
-			if (File.Exists(filePath)
-			   && CheckFileExecutableFlag(filePath))
+			if (File.Exists(filePath) && CheckFileExecutableFlag(filePath))
 			{
 				containingExecutablePath = filePath;
 				return true;
@@ -210,21 +218,5 @@ public class Program
 		var executeMask = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
 
 		return (fileMode & executeMask) != 0;
-	}
-
-	private static int GetRedirectIndex(IReadOnlyList<string> args)
-	{
-		const string StandardOutput = ">";
-		const string StandardOutput1 = ">1";
-
-		for (int position = 0; position < args.Count; position++)
-		{
-            if (args[position] is StandardOutput or StandardOutput1)
-			{
-				return position;
-			}
-		}
-
-		return -1;
 	}
 }
