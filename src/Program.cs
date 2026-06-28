@@ -24,6 +24,13 @@ public class Program
 				continue;
 			}
 
+			Console.WriteLine(command.Command);
+			foreach (var item in command.Arguments)
+			{
+				Console.WriteLine(item);
+			}
+			Console.WriteLine(command.OutputRedirectionFilePath);
+
 			var context = ExecuteCommand(command);
 			RouteStandardOutput(command, context);
 			RouteStandardError(context);

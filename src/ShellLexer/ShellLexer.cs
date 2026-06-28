@@ -95,6 +95,11 @@ public sealed class ShellLexer : IShellLexer
 					EmitOperator(context, TokenType.RedirectOut, $"{c}>");
 					context.CurrentInputBufferIndex++; // Skip reading >
 				}
+				else
+				{
+					context.TokenStarted = true;
+					context.LexemeBuffer.Append(c);
+				}
 				break;
 			default:
 				context.TokenStarted = true;
