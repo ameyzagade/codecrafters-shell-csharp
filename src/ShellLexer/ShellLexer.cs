@@ -27,7 +27,7 @@ public sealed class ShellLexer : IShellLexer
 			return [];
 		}
 
-		var context = new LexerContext()
+		var context = new LexerContext
 		{
 			InputBuffer = input
 		};
@@ -90,7 +90,8 @@ public sealed class ShellLexer : IShellLexer
 				context.EscapeNextCharacter = true;
 				break;
 			case '1' or '2':
-				if (GetNextLexeme(context) == '>')
+				var nextCharacter = PeekNextCharacter(context.InputBuffer, context.CurrentInputBufferIndex);
+				if (nextCharacter != null && nextCharacter == '>')
 				{
 					EmitOperator(context, TokenType.RedirectOut, $"{c}>");
 					context.CurrentInputBufferIndex++; // Skip reading >
@@ -179,11 +180,12 @@ public sealed class ShellLexer : IShellLexer
 		context.Tokens.Add(new Token(type, value));
 	}
 
-	private char GetNextLexeme(LexerContext context)
+	private char? PeekNextCharacter(string inputBuffer, int currentInputBufferIndex)
 	{
-		var inputBufferLength = context.InputBuffer.Length - 1;
-		var nextLexemeIndex = context.CurrentInputBufferIndex + 1;
-		return nextLexemeIndex > inputBufferLength ? context.InputBuffer[^1] : context.InputBuffer[nextLexemeIndex];
+		var inputBufferLength = inputBuffer.Length - 1;
+		var nextCharacterIndex = currentInputBufferIndex + 1;
+
+		return nextCharacterIndex > inputBufferLength ? null : inputBuffer[nextCharacterIndex];
 	}
 
 	private void ValidateEndState(LexerContext context)
