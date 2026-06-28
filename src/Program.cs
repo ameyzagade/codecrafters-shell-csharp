@@ -16,6 +16,7 @@ public class Program
 			}
 
 			var context = new ShellExecutor().Execute(command);
+			
 			RouteStandardOutput(command, context);
 			RouteStandardError(command, context);
 		}
