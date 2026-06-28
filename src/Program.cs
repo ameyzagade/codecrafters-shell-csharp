@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 public class Program
 {
-
+	private static readonly ShellExecutor Executor = new();
 
 	public static void Main()
 	{
@@ -15,8 +15,8 @@ public class Program
 				continue;
 			}
 
-			var context = new ShellExecutor().Execute(command);
-			
+			var context = Executor.Execute(command);
+
 			RouteStandardOutput(command, context);
 			RouteStandardError(command, context);
 		}
