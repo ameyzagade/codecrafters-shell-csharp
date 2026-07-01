@@ -78,7 +78,7 @@ public sealed class ShellTokenParser : ITokenParser
             return;
         }
 
-        if (token.Type is TokenType.RedirectStdOut or TokenType.RedirectStdErr)
+        if (token.Type is TokenType.RedirectStdOut or TokenType.RedirectStdErr or TokenType.AppendStdOut or TokenType.AppendStdErr)
         {
             context.PendingRedirectType = token.Type;
             context.State = ParserState.ExpectRedirectionTarget;
@@ -96,9 +96,16 @@ public sealed class ShellTokenParser : ITokenParser
             throw new Exception($"Word expected after redirect operator, got type {Enum.GetName(token.Type)} with value: {token.Value}");
         }
 
-        var redirectType = context.PendingRedirectType == TokenType.RedirectStdOut ? RedirectType.StdOut : RedirectType.StdErr;
-        context.Command.Redirect = new(redirectType, token.Value);
+        var redirectType = context.PendingRedirectType switch
+        {
+            TokenType.RedirectStdOut => RedirectType.StdOut,
+            TokenType.RedirectStdErr => RedirectType.StdErr,
+            TokenType.AppendStdOut => RedirectType.AppendStdOut,
+            TokenType.AppendStdErr => RedirectType.AppendStdErr,
+            _ => throw new Exception($"Redirect type unrecognised: {context.PendingRedirectType}"),
+        };
 
+        context.Command.Redirect = new(redirectType, token.Value);
         context.State = ParserState.ExpectArgumentOrRedirect;
     }
 

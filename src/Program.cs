@@ -44,25 +44,37 @@ public class Program
 
 	private static void RouteStandardOutput(ShellCommand command, ShellExecutionContext context)
 	{
-		if (command.Redirect.Type == RedirectType.StdOut)
+		switch (command.Redirect.Type)
 		{
-			File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardOutput);
-		}
-		else
-		{
-			Console.Write(context.StandardOutput);
+			case RedirectType.StdOut:
+				File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardOutput);
+				break;
+
+			case RedirectType.AppendStdOut:
+				File.AppendAllText(Path.GetFullPath(command.Redirect.Target), context.StandardOutput);
+				break;
+
+			default:
+				Console.Write(context.StandardOutput);
+				break;
 		}
 	}
 
 	private static void RouteStandardError(ShellCommand command, ShellExecutionContext context)
 	{
-		if (command.Redirect.Type == RedirectType.StdErr)
+		switch (command.Redirect.Type)
 		{
-			File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardError);
-		}
-		else
-		{
-			Console.Error.Write(context.StandardError);
+			case RedirectType.StdErr:
+				File.WriteAllText(Path.GetFullPath(command.Redirect.Target), context.StandardError);
+				break;
+
+			case RedirectType.AppendStdErr:
+				File.AppendAllText(Path.GetFullPath(command.Redirect.Target), context.StandardError);
+				break;
+
+			default:
+				Console.Error.Write(context.StandardError);
+				break;
 		}
 	}
 }

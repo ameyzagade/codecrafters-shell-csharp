@@ -16,7 +16,7 @@ public sealed class ShellLexer : IShellLexer
 		public LexerState State { get; set; }
 		public bool EscapeNextCharacter { get; set; }
 		public bool TokenStarted { get; set; }
-		public string InputBuffer { get; init; }
+		public string InputBuffer { get; init; } = string.Empty;
 		public int CurrentInputBufferIndex { get; set; } = 0;
 	}
 
@@ -76,7 +76,15 @@ public sealed class ShellLexer : IShellLexer
 		switch (c)
 		{
 			case '>':
-				EmitOperator(context, TokenType.RedirectStdOut, ">");
+				if (Peek(context) == '>')
+				{
+					EmitOperator(context, TokenType.AppendStdOut, ">>");
+					context.CurrentInputBufferIndex++; // Skip reading >>
+				}
+				else
+				{
+					EmitOperator(context, TokenType.RedirectStdOut, ">");
+				}
 				break;
 			case '\'':
 				context.TokenStarted = true;
@@ -90,8 +98,14 @@ public sealed class ShellLexer : IShellLexer
 				context.EscapeNextCharacter = true;
 				break;
 			case '1' or '2':
-				var nextCharacter = PeekNextCharacter(context.InputBuffer, context.CurrentInputBufferIndex);
-				if (nextCharacter != null && nextCharacter == '>')
+				if (MatchesAppendOperator(context))
+				{
+					var tokenType = c == '1' ? TokenType.AppendStdOut : TokenType.AppendStdErr;
+					EmitOperator(context, tokenType, $"{c}>>");
+
+					context.CurrentInputBufferIndex += 2; // Skip reading >>
+				}
+				else if (MatchesSingleRedirectOperator(context))
 				{
 					var tokenType = c == '1' ? TokenType.RedirectStdOut : TokenType.RedirectStdErr;
 					EmitOperator(context, tokenType, $"{c}>");
@@ -182,13 +196,16 @@ public sealed class ShellLexer : IShellLexer
 		context.Tokens.Add(new Token(type, value));
 	}
 
-	private char? PeekNextCharacter(string inputBuffer, int currentInputBufferIndex)
+	private char? Peek(LexerContext context, int relativeOffset = 1)
 	{
-		var inputBufferLength = inputBuffer.Length - 1;
-		var nextCharacterIndex = currentInputBufferIndex + 1;
+		var index = context.CurrentInputBufferIndex + relativeOffset;
 
-		return nextCharacterIndex > inputBufferLength ? null : inputBuffer[nextCharacterIndex];
+		return index >= context.InputBuffer.Length ? null : context.InputBuffer[index];
 	}
+
+	private bool MatchesSingleRedirectOperator(LexerContext context) => Peek(context, 1) == '>';
+
+	private bool MatchesAppendOperator(LexerContext context) => Peek(context, 1) == '>' && Peek(context, 2) == '>';
 
 	private void ValidateEndState(LexerContext context)
 	{

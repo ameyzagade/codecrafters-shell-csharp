@@ -2,5 +2,7 @@ public enum RedirectType
 {
     None,
     StdOut,
-    StdErr
+    StdErr,
+    AppendStdOut,
+    AppendStdErr
 }
